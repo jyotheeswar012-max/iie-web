@@ -1,9 +1,8 @@
 {
-  "buildCommand": "cd web && npm install && npm run build",
-  "outputDirectory": "web/.next",
-  "installCommand": "cd web && npm install",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "rewrites": [
-    { "source": "/api/backend/:path*", "destination": "https://iie-api.railway.app/:path*" }
-  ]
+  "rootDirectory": "web",
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next"
 }
