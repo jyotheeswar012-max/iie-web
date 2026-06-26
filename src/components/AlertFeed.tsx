@@ -1,64 +1,29 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ALERTS } from '@/lib/mockData'
-
-const levelStyle: Record<string, string> = {
-  CRITICAL: 'border-l-[#f85149] bg-red-950/40',
-  WARNING:  'border-l-[#e3b341] bg-yellow-950/30',
-  SAFE:     'border-l-[#3fb950] bg-green-950/30',
-}
-
+const ALERTS = [
+  { icon:'🔴', district:'Barmer, RJ',   msg:'NDVI 0.21 — Drought trigger verified',  level:'CRITICAL', time:'14:32', border:'border-red-700',    bg:'bg-red-950/30'    },
+  { icon:'🟠', district:'Puri, OD',     msg:'Rainfall 187mm — approaching flood',   level:'WARNING',  time:'14:21', border:'border-orange-700', bg:'bg-orange-950/30' },
+  { icon:'🔴', district:'Latur, MH',    msg:'Temp 46.2°C — Heatwave activated',     level:'CRITICAL', time:'14:08', border:'border-red-700',    bg:'bg-red-950/30'    },
+  { icon:'🟢', district:'Ludhiana, PB', msg:'₹34Cr paid to 3,840 farmers — done',  level:'SAFE',     time:'13:52', border:'border-green-700',  bg:'bg-green-950/30'  },
+  { icon:'🟠', district:'Adilabad, TG', msg:'Wind 78km/h — monitoring cyclone',     level:'WARNING',  time:'13:39', border:'border-orange-700', bg:'bg-orange-950/30' },
+  { icon:'🟢', district:'Amritsar, PB', msg:'₹21Cr auto-credited to 2,100 accounts',level:'SAFE',     time:'13:18', border:'border-green-700',  bg:'bg-green-950/30'  },
+]
 export default function AlertFeed() {
-  const [alerts, setAlerts] = useState(ALERTS)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newAlert = {
-        icon: ['\ud83d\udd34','\ud83d\udfe0','\ud83d\udfe2'][Math.floor(Math.random()*3)],
-        district: ['Barmer, RJ','Nashik, MH','Puri, OD','Warangal, TG'][Math.floor(Math.random()*4)],
-        message: 'Live satellite reading updated',
-        level: ['CRITICAL','WARNING','SAFE'][Math.floor(Math.random()*3)],
-        minsAgo: 0,
-        payout: null,
-      }
-      setAlerts(prev => [newAlert, ...prev.slice(0, 9)])
-    }, 8000)
-    return () => clearInterval(interval)
-  }, [])
-
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-white">🛡️ Live Alert Feed</h2>
-        <div className="flex items-center gap-2 bg-[#3fb950]/10 border border-[#3fb950]/30 rounded-full px-3 py-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#3fb950] animate-pulse" />
-          <span className="text-[#3fb950] text-xs font-bold">LIVE</span>
-        </div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base font-black text-[#e6edf3]">🛡️ Live Alert Feed</h3>
+        <span className="flex items-center gap-1.5 text-xs text-[#3fb950]"><span className="pulse-dot" /> LIVE</span>
       </div>
-
-      <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
-        <AnimatePresence>
-          {alerts.map((a, i) => (
-            <motion.div key={i}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className={`flex items-start gap-3 rounded-xl p-3.5 border-l-4 ${levelStyle[a.level] ?? 'border-l-gray-500 bg-white/5'}`}
-            >
-              <span className="text-xl mt-0.5">{a.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-white text-sm">{a.district}</div>
-                <div className="text-white/60 text-xs mt-0.5 leading-relaxed">{a.message}</div>
-                <div className="text-white/30 text-[10px] mt-1">{a.minsAgo === 0 ? 'just now' : `${a.minsAgo}m ago`} &middot; {a.level}</div>
-              </div>
-              {a.payout && (
-                <div className="text-green-400 font-bold text-sm whitespace-nowrap self-center">{a.payout}</div>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+      <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
+        {ALERTS.map((a,i) => (
+          <div key={i} className={`flex items-start gap-3 rounded-xl px-3 py-2.5 border-l-4 ${a.border} ${a.bg}`}>
+            <span className="text-lg">{a.icon}</span>
+            <div className="flex-1">
+              <div className="font-bold text-[#e6edf3] text-sm">{a.district}</div>
+              <div className="text-xs text-[#7d8590] mt-0.5">{a.msg}</div>
+              <div className="text-[10px] text-[#7d8590]/60 mt-1">{a.time} · {a.level}</div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

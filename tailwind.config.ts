@@ -1,37 +1,28 @@
 import type { Config } from 'tailwindcss'
-
 const config: Config = {
-  content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
       colors: {
         brand: {
-          navy:  '#0a0e27',
-          blue:  '#0d1b4b',
-          teal:  '#64ffda',
-          green: '#3fb950',
-          red:   '#f85149',
-          gold:  '#e3b341',
-        }
+          teal:   '#64ffda',
+          blue:   '#82b1ff',
+          purple: '#e040fb',
+          green:  '#3fb950',
+          red:    '#f85149',
+          orange: '#e3b341',
+          navy:   '#0a0e27',
+          dark:   '#0d1117',
+          card:   '#161b22',
+          border: '#21262d',
+          muted:  '#7d8590',
+          text:   '#e6edf3',
+        },
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
-      animation: {
-        'ticker':     'ticker 30s linear infinite',
-        'pulse-dot':  'pulse-dot 1.5s infinite',
-        'fade-up':    'fade-up 0.6s ease-out',
-        'count-up':   'count-up 2s ease-out',
-      },
-      keyframes: {
-        ticker:      { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } },
-        'pulse-dot': { '0%,100%': { boxShadow: '0 0 0 0 rgba(76,175,80,0)' }, '70%': { boxShadow: '0 0 0 8px rgba(76,175,80,0)' } },
-        'fade-up':   { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-      }
     },
   },
   plugins: [],
