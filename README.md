@@ -1,45 +1,57 @@
-# 🛡️ Invisible Insurance Engine — Web
+# Invisible Insurance Engine — iie-web
 
-[![Vercel](https://img.shields.io/badge/Deploy-Vercel-black)](https://vercel.com)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green)](https://fastapi.tiangolo.com)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org)
-[![SBI GFF 2026](https://img.shields.io/badge/SBI%20GFF-2026-blue)]()
+> **Insurance that pays before you ask.**
+> SBI GFF 2026 Hackathon Submission
 
-> **Agentic Parametric Insurance Payouts at Scale** — Next.js 14 + FastAPI full-stack app. Zero paperwork. Instant protection via SBI YONO.
+## 🚀 Tech Stack
 
----
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js 14, TypeScript, Tailwind CSS, Framer Motion |
+| Charts | Recharts |
+| Backend | FastAPI (Python) |
+| Deploy Frontend | Vercel |
+| Deploy Backend | Railway |
+| Data | Mock parametric data (NASA MODIS, IMD, Sentinel-2 simulation) |
 
-## 🏗️ Architecture
+## 📁 Project Structure
 
 ```
 iie-web/
-├── web/          # Next.js 14 frontend (Vercel)
-│   ├── app/      # App Router pages
-│   ├── components/
-│   └── lib/
-├── api/          # FastAPI backend (Railway/Render)
-│   ├── routers/
-│   ├── agents/
-│   └── main.py
-└── README.md
+├── web/          # Next.js 14 frontend
+│   └── src/
+│       ├── app/  # Pages: /, /risk, /enroll, /payouts, /impact
+│       └── components/
+└── api/          # FastAPI backend
+    ├── main.py
+    └── routers/  # risk, enrollment, payouts
 ```
 
-## 🚀 Quick Start
+## ⚡ Deploy to Vercel
+
+1. Push this repo to GitHub
+2. Go to [vercel.com](https://vercel.com) → New Project → Import `iie-web`
+3. Framework: **Next.js** · Root Directory: `web`
+4. Click **Deploy** — done in 60 seconds!
+
+## 🐍 Run FastAPI Backend Locally
 
 ```bash
-# Frontend
-cd web && npm install && npm run dev
-
-# Backend
-cd api && pip install -r requirements.txt && uvicorn main:app --reload
+cd api
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
 ```
 
-## 🌐 Deploy
+## 🌐 Pages
 
-- **Frontend** → Vercel (connect `web/` as root)
-- **Backend** → Railway (connect `api/` as root)
+| Route | Page |
+|-------|------|
+| `/` | Mission Control — Hero, metrics, farmer stories, alert feed, agent pipeline |
+| `/risk` | Satellite Risk Map — district table, filters, KPIs |
+| `/enroll` | Enroll a Farmer — profile form, plan picker, YONO enrollment |
+| `/payouts` | Live Payouts — charts, payout feed, filters |
+| `/impact` | Impact & Submission — GFF doc, pillars, copy-paste text |
 
----
+## 🏆 SBI GFF 2026
 
-*SBI GFF 2026 Hackathon · Jyotheeswar Reddy · Hyderabad*
+Built by **Jyotheeswar Reddy**, Hyderabad.
