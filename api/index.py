@@ -1,20 +1,17 @@
 """
-api/index.py  —  Vercel Python Serverless Entrypoint  (v4.0.0)
+api/index.py  —  Vercel Python Serverless Entrypoint  (v4.0.1)
 
-This file is intentionally THIN. All business logic lives in:
-  api/core/           — store, utils, logging, security, app dispatcher
-  api/oracle/         — 4-source oracle engine + enroll/verify handlers
-  api/contract/       — multi-agent orchestrator (4 agents, weighted quorum)
-  api/blockchain/     — smart contract state machine (ACTIVE→TRIGGERED→EXECUTED)
-  api/audit/          — SHA-256 tamper-evident append-only chain
-  api/ml/             — Naive Bayes log-likelihood risk scorer
-  api/india_stack/    — Aadhaar eKYC, DigiLocker, UPI IMPS simulator
-
-Vercel routes ALL /api/* requests here via vercel.json.
+FIX: Vercel executes api/index.py with cwd=/var/task but sys.path does NOT
+include the repo root, so `from api.core import ...` raises ModuleNotFoundError.
+The two lines below inject the repo root (/var/task) into sys.path at import
+time — before any api.* submodule is touched.
 """
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# --- everything below only runs after the path fix is in place ---
 from http.server import BaseHTTPRequestHandler
 import json
-from urllib.parse import urlparse, parse_qs
 from api.core.app import dispatch
 
 
@@ -39,7 +36,7 @@ class handler(BaseHTTPRequestHandler):
                 self._json(400, {"error": "Invalid JSON body"})
                 return
 
-        headers = {k.lower(): v for k, v in self.headers.items()}
+        headers   = {k.lower(): v for k, v in self.headers.items()}
         client_ip = self.headers.get("X-Forwarded-For", self.client_address[0])
 
         try:
@@ -47,9 +44,9 @@ class handler(BaseHTTPRequestHandler):
         except Exception as exc:
             import traceback
             self._json(500, {
-                "error":   "Internal server error",
-                "detail":  str(exc),
-                "trace":   traceback.format_exc()[-800:],
+                "error":  "Internal server error",
+                "detail": str(exc),
+                "trace":  traceback.format_exc()[-1200:],
             })
             return
 
@@ -75,4 +72,4 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, *args): pass   # suppress Vercel access log noise
+    def log_message(self, *args): pass
