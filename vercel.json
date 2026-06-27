@@ -4,21 +4,9 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "functions": {
-    "api/oracle/enroll.py":    { "runtime": "python3.12" },
-    "api/oracle/verify.py":    { "runtime": "python3.12" },
-    "api/oracle/feed.py":      { "runtime": "python3.12" },
-    "api/contract/execute.py": { "runtime": "python3.12" },
-    "api/audit/trail.py":      { "runtime": "python3.12" },
-    "api/ml/predict.py":       { "runtime": "python3.12" },
-    "api/health.py":           { "runtime": "python3.12" }
+    "api/index.py": { "runtime": "python3.12", "maxDuration": 10 }
   },
   "rewrites": [
-    { "source": "/api/oracle/enroll",    "destination": "/api/oracle/enroll" },
-    { "source": "/api/oracle/verify",    "destination": "/api/oracle/verify" },
-    { "source": "/api/oracle/feed",      "destination": "/api/oracle/feed" },
-    { "source": "/api/contract/execute", "destination": "/api/contract/execute" },
-    { "source": "/api/audit/trail",      "destination": "/api/audit/trail" },
-    { "source": "/api/ml/predict",       "destination": "/api/ml/predict" },
-    { "source": "/api/health",           "destination": "/api/health" }
+    { "source": "/api/:path*", "destination": "/api/index" }
   ]
 }
