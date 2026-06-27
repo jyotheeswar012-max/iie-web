@@ -1,141 +1,133 @@
-# 🛡️ YONO-Oracle IIE — Invisible Insurance Engine
+# YONO-Oracle IIE — Intelligent Insurance Engine
 
-> **"Insurance that pays before you ask — verified by India Stack + Autonomous Agents + Immutable Smart Contracts."**
+> **SBI Global FinTech Fest 2026 — Proof of Concept**
+> Parametric crop insurance with zero claim forms, powered by multi-agent AI + blockchain + India Stack.
 
-[![SBI GFF 2026](https://img.shields.io/badge/SBI%20GFF-2026-gold?style=for-the-badge)](https://github.com/jyotheeswar012-max/iie-web)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
-[![Polygon](https://img.shields.io/badge/Blockchain-Polygon-purple?style=for-the-badge)](https://polygon.technology)
+🌐 **Live:** https://iie-6hpoxmb7q-jyotheeswar.vercel.app
 
 ---
 
-## 🚀 What Is IIE?
-
-The **Invisible Insurance Engine** is a sovereign agentic parametric insurance system built natively on SBI YONO. It monitors India’s satellites, weather, and soil in real time — and when disaster strikes, **farmers get paid in under 2 hours with zero forms, zero agents, and zero disputes.**
-
-### Tagline
-*Insurance that pays before you ask — verified by India Stack + Autonomous Agents + Immutable Smart Contracts.*
-
----
-
-## 🎯 GFF 2026 Hackathon Themes Addressed
-
-| Theme | How IIE Addresses It |
-|---|---|
-| 📱 **Digital Engagement** | Real-time satellite alerts + YONO push notifications + live payout dashboard |
-| 👥 **Customer Acquisition** | One-tap Aadhaar e-KYC enrollment — zero branch visit, zero paperwork |
-| 💻 **Digital Adoption** | UPI auto-debit premium + auto-credit payout = YONO stickiness for rural India |
-
----
-
-## ✨ Key Features
-
-### 🤖 Multi-Agentic AI Orchestration
-- **Agent 1: Risk Monitor** — Ingests NASA MODIS NDVI, IMD rainfall, ISRO Bhuvan soil data every 5 minutes
-- **Agent 2: Verifier** — Cross-validates across 4 sources with ≥75% quorum consensus
-- **Agent 3: Policy Matcher + Compliance Guardian** — Checks RBI/DPDP rules + KYC status
-- **Agent 4: Executor** — Triggers blockchain smart contract + UPI/IMPS credit
-
-### ⛓️ Hybrid Blockchain Oracle
-- **Polygon Mumbai** — Low-cost smart contracts for policy issuance and payout execution
-- **Hyperledger Fabric** — Permissioned audit ledger for IRDAI/RBI regulatory access
-- **Chainlink-style Oracle** — Decentralized oracle feeding NDVI/rainfall data on-chain
-- **IPFS** — Immutable policy document storage
-
-### 🇮🇳 India Stack Integration
-- **Aadhaar e-KYC** (UIDAI) — Identity verification in <3 seconds
-- **DigiLocker** (MeitY) — Land records + policy storage
-- **ISRO Bhuvan** — Farm geotagging without field visits
-- **UPI / DBT** (NPCI) — Direct benefit transfer to Aadhaar-seeded accounts
-
-### 📊 Real ML Model
-- Lightweight NDVI drought risk predictor (scikit-learn decision tree logic)
-- Based on FAO + ISRO published NDVI thresholds
-- Batch prediction across 600+ districts via FastAPI
-
----
-
-## 📊 Impact Numbers
-
-| Metric | Value |
-|---|---|
-| Farmers covered (target) | 10L+ |
-| Payout capacity | ₹500 Cr/season |
-| Average payout time | **47 minutes** |
-| Claim forms required | **0** |
-| AI prediction accuracy | 99.7% |
-| PMFBY settlement time | 6–18 months |
-| IIE settlement time | **<2 hours** |
-| Addressable market | 140M+ uninsured farmers |
-
----
-
-## 🏗️ Tech Stack
+## Architecture (v4.0.0)
 
 ```
-Frontend:  Next.js 14 + TypeScript + Tailwind CSS + Recharts
-Backend:   FastAPI (Python) + scikit-learn
-Blockchain: Solidity + Polygon + Hyperledger Fabric (simulation)
-Oracle:    Chainlink-style parametric oracle (Python mock)
-Infra:     Vercel (frontend) + Railway (backend)
-India Stack: Aadhaar e-KYC + DigiLocker + ISRO Bhuvan + UPI
+┌─────────────────────────────────────────────────────────────────┐
+│                    FARMER INTERFACE (YONO App / Web)                    │
+└────────────────────────────────┬───────────────────────────────┘
+                                 │
+                    ┌─────────┴─────────┐
+                    │   api/index.py          │  ← Thin Vercel entrypoint
+                    │   api/core/app.py        │  ← Route dispatcher + auth
+                    └─────────┬─────────┘
+                              │
+     ┌────────────────┬─────────┴─────────┬────────────────┐
+     │               │          │          │                │
+┌───┴───┐  ┌────┴───┐  ┌───┴───┐  ┌───┴───┐  ┌────┴───┐
+│ Oracle  │  │ Agents  │  │Blockchain│  │  ML    │  │IndiaStack│
+│ Engine  │  │ (x4)    │  │   SM     │  │Scorer  │  │Simulator │
+└────────┘  └────────┘  └────────┘  └────────┘  └────────┘
+4 Sources    Weighted       ACTIVE→       NB Log-      Aadhaar/
+NASA/IMD/    Quorum 75%     TRIGGERED→    Likelihood   DigiLocker
+ISRO/ICAR    (30/25/25/20)  EXECUTED       Sigmoid      UPI IMPS
 ```
 
 ---
 
-## 📁 Repo Structure
+## Module Map
+
+| Module | Purpose |
+|--------|--------|
+| `api/core/store.py` | Thread-safe shelve KV (Redis-ready) |
+| `api/core/utils.py` | SHA-256, HMAC, tx_hash, Aadhaar token |
+| `api/core/logging.py` | Structured JSON trace logs → stderr |
+| `api/core/security.py` | API-key auth + rolling rate limiter |
+| `api/core/app.py` | Central route dispatcher |
+| `api/oracle/engine.py` | 4-source oracle + enroll + verify |
+| `api/contract/agents.py` | Multi-agent orchestrator (MAO-v2) |
+| `api/blockchain/state_machine.py` | SM: ACTIVE→TRIGGERED→EXECUTED |
+| `api/audit/chain.py` | SHA-256 append-only tamper-evident chain |
+| `api/ml/predictor.py` | Naive Bayes log-likelihood risk scorer |
+| `api/india_stack/simulator.py` | Aadhaar eKYC, DigiLocker, UPI/IMPS |
+
+---
+
+## API Reference
+
+### Authentication
+All protected routes require `X-IIE-Key` header (or `?key=` query param).
+
+| Key | Tier | RPM |
+|-----|------|-----|
+| `iie-demo-2026` | demo | 30 |
+| `iie-judge-2026` | judge | 120 |
+
+Open (no key needed): `GET /api/health`, `GET /api/oracle/feed`, `GET /api/ml/batch`
+
+### Endpoints
 
 ```
-iie-web/
-├── src/
-│   ├── app/
-│   │   ├── page.tsx          # Mission Control homepage
-│   │   ├── risk/             # Live risk map
-│   │   ├── enroll/           # YONO enrollment flow
-│   │   ├── payouts/          # Live payout dashboard
-│   │   ├── blockchain/       # Smart contracts + oracle
-│   │   ├── india-stack/      # India Stack demo
-│   │   ├── architecture/     # System architecture
-│   │   └── impact/           # GFF submission
-│   └── components/
-├── api/
-│   ├── blockchain/oracle.py  # Chainlink-style oracle API
-│   └── ml/ndvi_predictor.py  # NDVI drought risk ML model
-├── package.json
-└── vercel.json
+GET  /api/health                     — system status, chain validity, counters
+GET  /api/oracle/feed                — live risk feed: 10 districts
+POST /api/oracle/enroll              — enroll farmer, deploy smart contract
+POST /api/oracle/verify              — run 4-agent quorum on oracle data
+POST /api/contract/execute           — execute state transition, IMPS payout
+GET  /api/contract/all               — all contracts with state distribution
+GET  /api/contract/:policy_id        — single contract detail + state machine
+GET  /api/audit/trail                — full SHA-256 chained ledger + integrity report
+POST /api/ml/predict                 — Naive Bayes drought risk score
+GET  /api/ml/batch                   — batch predictions: 8 Indian districts
+POST /api/india-stack/verify         — Aadhaar eKYC + DigiLocker simulation
+POST /api/yono/pay                   — IMPS payout simulation
+GET  /api/yono/transactions          — all UPI/IMPS transactions
+```
+
+### Quick Start (curl)
+
+```bash
+# 1. Enroll
+curl -X POST https://iie-6hpoxmb7q-jyotheeswar.vercel.app/api/oracle/enroll \
+  -H 'Content-Type: application/json' \
+  -H 'X-IIE-Key: iie-demo-2026' \
+  -d '{"name":"Ramesh Kumar","aadhaar_last4":"4821","district":"Barmer",
+       "state":"Rajasthan","crop":"wheat","acreage":4.5,"plan":"Smart Shield"}'
+
+# 2. Verify (triggers 4-agent quorum)
+curl -X POST .../api/oracle/verify \
+  -H 'X-IIE-Key: iie-demo-2026' \
+  -d '{"policy_id":"IIE-XXXXXXXX","event_type":"drought"}'
+
+# 3. Execute (auto IMPS payout)
+curl -X POST .../api/contract/execute \
+  -H 'X-IIE-Key: iie-demo-2026' \
+  -d '{"policy_id":"IIE-XXXXXXXX"}'
+
+# 4. Audit trail
+curl https://iie-6hpoxmb7q-jyotheeswar.vercel.app/api/audit/trail?key=iie-demo-2026
 ```
 
 ---
 
-## 🛡️ Compliance & Regulatory Alignment
+## Security & Compliance
 
-| Regulation | Alignment |
-|---|---|
-| **RBI Regulatory Sandbox** | Architecture designed for sandbox pilot in 5 districts |
-| **DPDP Act 2023** | No PII on-chain; Aadhaar hash only; data minimisation |
-| **IRDAI Parametric Guidelines** | Objective index triggers (NDVI, rainfall mm, temp °C) |
-| **RBI UPI Guidelines** | Payouts within transaction limits via IMPS/UPI |
-| **PM-FASAL** | Government subsidy auto-applied at enrollment |
-
-> ⚠️ **Disclaimer:** This is a proof-of-concept built for SBI GFF 2026. All blockchain interactions, NDVI data, and payout flows are simulated. Real deployment requires RBI Sandbox approval, IRDAI product filing, and SBI Core Banking API access.
+- **DPDP Act 2023**: No raw Aadhaar stored — HMAC-SHA256 one-way token only
+- **API key auth**: X-IIE-Key header, per-key rolling rate limits
+- **Audit chain**: SHA-256 prev_hash chaining — any mutation is detectable
+- **State machine**: Irreversible transitions — no double-payout possible
+- **TLS**: All traffic over HTTPS (Vercel edge)
 
 ---
 
-## 🗣️ Phased Rollout
+## Production Roadmap
 
-| Phase | Timeline | Scope |
-|---|---|---|
-| **Pilot** | Month 1–3 | 5 districts, 10,000 farmers, RBI sandbox |
-| **State Scale** | Month 4–6 | 2 states via YONO, PMFBY reinsurance |
-| **National** | Month 7–12 | All SBI YONO farmers, full Polygon mainnet |
-| **Ecosystem** | Year 2 | ONDC listing, OCEN credit link, B2B APIs |
-
----
-
-## 👨‍💻 Team
-
-**Jyotheeswar Reddy** · Hyderabad, India · SBI GFF 2026
+| Component | PoC (now) | Production |
+|-----------|-----------|------------|
+| Data store | shelve / /tmp | Redis / PostgreSQL |
+| Oracle data | Deterministic simulation | NASA MODIS + IMD REST + ISRO WMS |
+| Blockchain | SHA-256 simulation | Hyperledger Fabric channel |
+| ML model | Naive Bayes LLR | sklearn GBM on 10yr MODIS |
+| India Stack | Simulation | UIDAI sandbox → RBI approval |
+| Auth | API key | OAuth2 + mTLS |
+| Payout | IMPS simulation | SBI Core Banking API |
 
 ---
 
-*Built with ❤️ for India's 140M uninsured farmers.*
+*YONO-Oracle IIE — Built for SBI GFF 2026. Not for production use without RBI/IRDAI approval.*
