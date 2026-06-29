@@ -3,7 +3,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "installCommand": "npm install && pip install fastapi uvicorn pydantic slowapi python-jose passlib scikit-learn numpy python-multipart httpx",
   "functions": {
     "api/index.py": {
       "runtime": "python3.12",
@@ -12,12 +11,5 @@
   },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index" }
-  ],
-  "env": {
-    "JWT_SECRET":      "@iie-jwt-secret",
-    "IIE_API_KEY":     "@iie-api-key",
-    "CORS_ORIGINS":    "@iie-cors-origins",
-    "LOG_LEVEL":       "INFO",
-    "LOG_FORMAT":      "json"
-  }
+  ]
 }

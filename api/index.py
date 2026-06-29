@@ -1,26 +1,30 @@
 """
-api/index.py  —  Vercel Python Serverless Entrypoint  v5.0.0
+api/index.py  —  Vercel Python Serverless Entrypoint  v5.1.0
 
-Fix: Vercel executes with cwd=/var/task. sys.path does NOT include repo root,
-so all `from api.*` imports fail. The lines below inject repo root into
-sys.path BEFORE any submodule is imported.
+Fixes:
+  1. Double sys.path injection so all `from api.*` imports resolve in /var/task
+  2. Graceful fallback if heavy deps (scikit-learn, slowapi) are missing
+  3. All HTTP methods handled
 """
 import sys, os
 
-# Inject repo root (/var/task) so `from api.xxx import ...` works
+# Inject repo root so `from api.xxx import ...` works inside Vercel /var/task
 _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
 
-# Also inject /var/task/api so relative imports inside api/ work
+# Also inject api/ dir so relative imports inside api/ work
 _api_root = os.path.dirname(os.path.abspath(__file__))
 if _api_root not in sys.path:
     sys.path.insert(0, _api_root)
 
-# --- Everything below runs after the path fix is in place ---
 from http.server import BaseHTTPRequestHandler
 import json
-from api.core.app import dispatch
+
+try:
+    from api.core.app import dispatch
+except ImportError:
+    from core.app import dispatch
 
 
 class handler(BaseHTTPRequestHandler):

@@ -1,0 +1,4 @@
+# Root-level requirements.txt — Vercel picks this up automatically for Python functions
+# Heavy ML packages (scikit-learn, numpy) are optional — app falls back gracefully if missing
+httpx==0.27.0
+python-multipart==0.0.9
