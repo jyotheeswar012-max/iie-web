@@ -53,8 +53,8 @@ const FLOW = [
   { step:'01', title:'Satellite detects anomaly', desc:'NDVI drops below 0.30 in Barmer. NASA MODIS + ISRO Bhuvan confirm.', color:'#64ffda', icon:'🛰️' },
   { step:'02', title:'4 AI Agents convene', desc:'Risk Monitor flags it. Verifier cross-checks 4 sources. 94% consensus reached in 8 seconds.', color:'#82b1ff', icon:'🤖' },
   { step:'03', title:'Oracle feeds smart contract', desc:'Chainlink-style oracle pushes verified data on-chain. IIEPolicy.sol receives the event.', color:'#e040fb', icon:'📡' },
-  { step:'04', title:'Smart contract auto-executes', desc:'Quorum ≥ 75% → contract executes. Immutable. Zero human intervention. Block #19823441.', color:'#e3b341', icon:'⛓️' },
-  { step:'05', title:'SBI Core API credits UPI', desc:'Aadhaar-seeded DBT flow. ₹48,200 hits farmer's SBI savings account. SMS sent.', color:'#3fb950', icon:'⚡' },
+  { step:'04', title:'Smart contract auto-executes', desc:'Quorum >= 75% - contract executes. Immutable. Zero human intervention. Block #19823441.', color:'#e3b341', icon:'⛓️' },
+  { step:'05', title:'SBI Core API credits UPI', desc:"Aadhaar-seeded DBT flow. \u20B948,200 hits farmer's SBI savings account. SMS sent.", color:'#3fb950', icon:'⚡' },
 ]
 
 export default function ArchitecturePage() {
@@ -66,7 +66,7 @@ export default function ArchitecturePage() {
           System Architecture
         </h1>
         <p className="text-white/50 text-sm max-w-2xl mx-auto mb-4">
-          5-layer sovereign AI architecture. Satellite data → Agentic AI → Blockchain Oracle → India Stack → YONO payout. End-to-end in under 2 hours.
+          5-layer sovereign AI architecture. Satellite data to Agentic AI to Blockchain Oracle to India Stack to YONO payout. End-to-end in under 2 hours.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           {['5 Layers','4 AI Agents','4 Data Sources','Smart Contracts','India Stack'].map(t => (
@@ -77,7 +77,7 @@ export default function ArchitecturePage() {
 
       {/* Architecture layers */}
       <div>
-        <h2 className="text-xl font-black text-[#e6edf3] mb-5">🏗️ System Layers</h2>
+        <h2 className="text-xl font-black text-[#e6edf3] mb-5">System Layers</h2>
         <div className="space-y-3">
           {LAYERS.map((layer, li) => (
             <div key={li} className="rounded-2xl p-5 border" style={{ borderColor:`${layer.color}25`, background:`linear-gradient(90deg, ${layer.color}06, #0d1117)` }}>
@@ -106,7 +106,7 @@ export default function ArchitecturePage() {
 
       {/* End-to-end flow */}
       <div>
-        <h2 className="text-xl font-black text-[#e6edf3] mb-5">⚡ End-to-End Payout Flow</h2>
+        <h2 className="text-xl font-black text-[#e6edf3] mb-5">End-to-End Payout Flow</h2>
         <div className="relative">
           {FLOW.map((f, i) => (
             <div key={i} className="flex gap-5 mb-6 last:mb-0">
@@ -128,7 +128,7 @@ export default function ArchitecturePage() {
 
       {/* Compliance */}
       <div className="glass rounded-3xl p-8">
-        <h2 className="text-xl font-black text-[#e6edf3] mb-4">🛡️ Compliance & Regulatory Alignment</h2>
+        <h2 className="text-xl font-black text-[#e6edf3] mb-4">Compliance &amp; Regulatory Alignment</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
             { title:'RBI Sandbox Ready', body:'Architecture aligned with RBI Regulatory Sandbox framework. Pilot in 5 districts before scale.', color:'#64ffda', icon:'🏦' },
@@ -146,7 +146,7 @@ export default function ArchitecturePage() {
           ))}
         </div>
         <div className="mt-4 text-xs text-[#7d8590] bg-[#161b22] rounded-xl p-4 border border-[#21262d]">
-          <span className="text-[#e3b341] font-bold">⚠️ Disclaimer:</span> This is a proof-of-concept demonstration built for SBI GFF 2026. Blockchain interactions, NDVI data, and payout flows are simulated. Real deployment requires RBI sandbox approval, IRDAI product filing, and SBI Core Banking API integration.
+          <span className="text-[#e3b341] font-bold">Disclaimer:</span> This is a proof-of-concept demonstration built for SBI GFF 2026. Blockchain interactions, NDVI data, and payout flows are simulated. Real deployment requires RBI sandbox approval, IRDAI product filing, and SBI Core Banking API integration.
         </div>
       </div>
     </div>

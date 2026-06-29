@@ -2,11 +2,11 @@
 import { useState, useEffect } from 'react'
 
 const CONTRACTS = [
-  { id:'IIE-0xA3f7', farmer:'Raju Patil',    district:'Barmer, RJ',   crop:'Cotton',  trigger:'Drought',  ndvi:'0.21', confidence:94, status:'EXECUTED', hash:'0xa3f7...d291', block:19823441, ts:'14:32:18', amount:'₹48,200' },
-  { id:'IIE-0xB8c2', farmer:'Anita Devi',    district:'Puri, OD',     crop:'Paddy',   trigger:'Flood',    ndvi:'N/A',  confidence:97, status:'EXECUTED', hash:'0xb8c2...f104', block:19823398, ts:'14:18:44', amount:'₹32,800' },
-  { id:'IIE-0xC1d9', farmer:'Vijay Singh',   district:'Ludhiana, PB', crop:'Wheat',   trigger:'Drought',  ndvi:'0.24', confidence:91, status:'EXECUTED', hash:'0xc1d9...a882', block:19823301, ts:'13:55:02', amount:'₹62,500' },
-  { id:'IIE-0xD4e5', farmer:'Meena Kumari',  district:'Nashik, MH',   crop:'Soybean', trigger:'Heatwave', ndvi:'0.31', confidence:88, status:'PENDING',  hash:'0xd4e5...pending', block:null, ts:'14:41:00', amount:'₹28,400' },
-  { id:'IIE-0xE2f1', farmer:'Suresh Rao',    district:'Khammam, TG',  crop:'Paddy',   trigger:'Flood',    ndvi:'N/A',  confidence:82, status:'VERIFYING',hash:'0xe2f1...verify',  block:null, ts:'14:38:00', amount:'₹41,100' },
+  { id:'IIE-0xA3f7', farmer:'Raju Patil',    district:'Barmer, RJ',   crop:'Cotton',  trigger:'Drought',  ndvi:'0.21', confidence:94, status:'EXECUTED', hash:'0xa3f7...d291', block:19823441, ts:'14:32:18', amount:'\u20B948,200' },
+  { id:'IIE-0xB8c2', farmer:'Anita Devi',    district:'Puri, OD',     crop:'Paddy',   trigger:'Flood',    ndvi:'N/A',  confidence:97, status:'EXECUTED', hash:'0xb8c2...f104', block:19823398, ts:'14:18:44', amount:'\u20B932,800' },
+  { id:'IIE-0xC1d9', farmer:'Vijay Singh',   district:'Ludhiana, PB', crop:'Wheat',   trigger:'Drought',  ndvi:'0.24', confidence:91, status:'EXECUTED', hash:'0xc1d9...a882', block:19823301, ts:'13:55:02', amount:'\u20B962,500' },
+  { id:'IIE-0xD4e5', farmer:'Meena Kumari',  district:'Nashik, MH',   crop:'Soybean', trigger:'Heatwave', ndvi:'0.31', confidence:88, status:'PENDING',  hash:'0xd4e5...pending', block:null, ts:'14:41:00', amount:'\u20B928,400' },
+  { id:'IIE-0xE2f1', farmer:'Suresh Rao',    district:'Khammam, TG',  crop:'Paddy',   trigger:'Flood',    ndvi:'N/A',  confidence:82, status:'VERIFYING',hash:'0xe2f1...verify',  block:null, ts:'14:38:00', amount:'\u20B941,100' },
 ]
 
 const ORACLE_SOURCES = [
@@ -36,9 +36,8 @@ contract IIEPolicy {
     event PolicyIssued(bytes32 indexed policyId, address farmer);
     event PayoutExecuted(bytes32 indexed policyId, uint256 amount);
 
-    /// @dev Called by each AI agent after verification
     function submitVote(bytes32 policyId, bool triggered) external onlyAgent {
-        if (triggered) agentVotes[policyId] += 25; // 4 agents = 100%
+        if (triggered) agentVotes[policyId] += 25;
         if (agentVotes[policyId] >= 75) {
             _executePayout(policyId);
         }
@@ -48,10 +47,16 @@ contract IIEPolicy {
         Policy storage p = policies[policyId];
         require(p.active, "Policy inactive");
         p.active = false;
-        // UPI credit via SBI Core Banking API
         emit PayoutExecuted(policyId, p.coverage);
     }
 }`
+
+function highlightSolidity(code: string): string {
+  return code
+    .replace(/\/\/[^\n]*/g, s => `<span style="color:#6e7681">${s}</span>`)
+    .replace(/\b(pragma|contract|struct|mapping|event|function|emit|require|internal|external|bool|uint256|uint8|address|bytes32|public|true|false|if)\b/g, s => `<span style="color:#ff7b72">${s}</span>`)
+    .replace(/"[^"]*"/g, s => `<span style="color:#a5d6ff">${s}</span>`)
+}
 
 export default function BlockchainPage() {
   const [selected, setSelected] = useState(0)
@@ -72,7 +77,7 @@ export default function BlockchainPage() {
       {/* Header */}
       <div className="rounded-3xl p-8 relative overflow-hidden grid-bg" style={{ background:'linear-gradient(135deg,#030712,#0a0f1e,#0d1f12)', border:'1px solid rgba(100,255,218,0.12)' }}>
         <div className="absolute top-6 right-8 text-6xl opacity-10 select-none">⛓️</div>
-        <div className="text-xs font-bold tracking-[3px] text-[#64ffda] uppercase mb-3">⛓️ Hybrid Blockchain · Polygon + Hyperledger Fabric</div>
+        <div className="text-xs font-bold tracking-[3px] text-[#64ffda] uppercase mb-3">Hybrid Blockchain - Polygon + Hyperledger Fabric</div>
         <h1 className="text-4xl font-black gradient-text mb-2">YONO-Oracle Smart Contracts</h1>
         <p className="text-white/50 text-sm max-w-2xl">Every policy is a smart contract. Every payout is immutable. Zero disputes. Zero fraud. Verifiable by any judge, auditor, or regulator on-chain.</p>
         <div className="flex flex-wrap gap-3 mt-5">
@@ -91,7 +96,7 @@ export default function BlockchainPage() {
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
               tab===t ? 'bg-[#64ffda] text-[#030712]' : 'bg-[#161b22] border border-[#21262d] text-[#7d8590] hover:text-[#e6edf3]'
-            }`}>{t==='contracts'?'📋 Smart Contracts':t==='oracle'?'📡 Oracle Network':'📜 Solidity Code'}</button>
+            }`}>{t==='contracts'?'Smart Contracts':t==='oracle'?'Oracle Network':'Solidity Code'}</button>
         ))}
       </div>
 
@@ -200,7 +205,7 @@ export default function BlockchainPage() {
             ))}
           </div>
           <div className="bg-[#0d1117] border border-[#21262d] rounded-2xl p-6">
-            <h3 className="font-black text-[#e6edf3] mb-4">📡 Oracle Data Flow</h3>
+            <h3 className="font-black text-[#e6edf3] mb-4">Oracle Data Flow</h3>
             <div className="flex flex-wrap items-center gap-3 text-sm">
               {['NASA MODIS','IMD Rainfall','ISRO Bhuvan','ICAR Soil'].map((s,i) => (
                 <div key={i} className="flex items-center gap-2">
@@ -217,10 +222,10 @@ export default function BlockchainPage() {
             </div>
             <div className="mt-4 text-xs text-[#7d8590] bg-[#161b22] rounded-xl p-4 font-mono leading-relaxed">
               <div className="text-[#3fb950] mb-2"># Chainlink-style oracle feed (mocked with live IMD/ISRO data)</div>
-              <div><span className="text-[#82b1ff]">oracle.getLatestRound</span>(<span className="text-[#e3b341]">&quot;NDVI_BARMER&quot;</span>) → <span className="text-[#f85149]">0.21</span> ✓ threshold=0.30</div>
-              <div><span className="text-[#82b1ff]">oracle.getLatestRound</span>(<span className="text-[#e3b341]">&quot;RAIN_PURI&quot;</span>) → <span className="text-[#f85149]">218mm</span> ✓ threshold=200mm</div>
-              <div><span className="text-[#82b1ff]">oracle.getLatestRound</span>(<span className="text-[#e3b341]">&quot;TEMP_LATUR&quot;</span>) → <span className="text-[#f85149]">46.2°C</span> ✓ threshold=45°C</div>
-              <div className="mt-2 text-[#64ffda]">→ quorum: 3/4 sources triggered → smart contract._executePayout() → ₹48,200 → UPI</div>
+              <div><span className="text-[#82b1ff]">oracle.getLatestRound</span>(<span className="text-[#e3b341]">&quot;NDVI_BARMER&quot;</span>) → <span className="text-[#f85149]">0.21</span> threshold=0.30</div>
+              <div><span className="text-[#82b1ff]">oracle.getLatestRound</span>(<span className="text-[#e3b341]">&quot;RAIN_PURI&quot;</span>) → <span className="text-[#f85149]">218mm</span> threshold=200mm</div>
+              <div><span className="text-[#82b1ff]">oracle.getLatestRound</span>(<span className="text-[#e3b341]">&quot;TEMP_LATUR&quot;</span>) → <span className="text-[#f85149]">46.2°C</span> threshold=45°C</div>
+              <div className="mt-2 text-[#64ffda]">→ quorum: 3/4 sources triggered → smart contract._executePayout() → UPI</div>
             </div>
           </div>
         </div>
@@ -239,11 +244,7 @@ export default function BlockchainPage() {
               <span className="text-xs text-[#64ffda] font-bold">Polygon Mumbai Testnet</span>
             </div>
             <pre className="p-5 text-xs font-mono text-[#e6edf3] leading-relaxed overflow-x-auto" style={{ background:'#0d1117' }}>
-              <code dangerouslySetInnerHTML={{ __html: SOLIDITY_SNIPPET
-                .replace(///.*/g, s => `<span style="color:#6e7681">${s}</span>`)
-                .replace(/\b(pragma|contract|struct|mapping|event|function|emit|require|internal|external|bool|uint256|uint8|address|bytes32|public|true|false|if)\b/g, s => `<span style="color:#ff7b72">${s}</span>`)
-                .replace(/"[^"]*"/g, s => `<span style="color:#a5d6ff">${s}</span>`)
-              }} />
+              <code dangerouslySetInnerHTML={{ __html: highlightSolidity(SOLIDITY_SNIPPET) }} />
             </pre>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
