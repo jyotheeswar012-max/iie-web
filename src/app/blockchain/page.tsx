@@ -63,11 +63,17 @@ export default function BlockchainPage() {
   const [lats, setLats] = useState(ORACLE_SOURCES.map(o => o.lat))
   const [blockHeight, setBlockHeight] = useState(19823441)
   const [tab, setTab] = useState<'contracts'|'oracle'|'solidity'>('contracts')
+  const [highlightedCode, setHighlightedCode] = useState('')
 
   useEffect(() => {
     const t1 = setInterval(() => setBlockHeight(h => h + 1), 3000)
     const t2 = setInterval(() => setLats(prev => prev.map(l => Math.max(20, l + Math.floor(Math.random()*20)-10))), 1200)
     return () => { clearInterval(t1); clearInterval(t2) }
+  }, [])
+
+  // Only run syntax highlighting on the client to avoid hydration mismatch
+  useEffect(() => {
+    setHighlightedCode(highlightSolidity(SOLIDITY_SNIPPET))
   }, [])
 
   const c = CONTRACTS[selected]
@@ -244,7 +250,10 @@ export default function BlockchainPage() {
               <span className="text-xs text-[#64ffda] font-bold">Polygon Mumbai Testnet</span>
             </div>
             <pre className="p-5 text-xs font-mono text-[#e6edf3] leading-relaxed overflow-x-auto" style={{ background:'#0d1117' }}>
-              <code dangerouslySetInnerHTML={{ __html: highlightSolidity(SOLIDITY_SNIPPET) }} />
+              {highlightedCode
+                ? <code suppressHydrationWarning dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+                : <code>{SOLIDITY_SNIPPET}</code>
+              }
             </pre>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
