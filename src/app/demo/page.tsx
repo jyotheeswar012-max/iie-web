@@ -113,9 +113,9 @@ function Badge({ label, color }: { label: string; color?: string }) {
   );
 }
 
-function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Card({ children, style, className }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) {
   return (
-    <div style={{
+    <div className={className} style={{
       background: 'var(--card)', border: '1px solid var(--border)',
       borderRadius: 12, padding: '20px 24px', ...style
     }}>{children}</div>
@@ -218,14 +218,12 @@ export default function DemoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Form state
   const [form, setForm] = useState({
     name: 'Ravi Kumar', aadhaar_last4: '3842', district: 'Barmer',
     state: 'Rajasthan', crop: 'wheat', acreage: '4', plan: 'Smart Shield',
     event_type: 'drought',
   });
 
-  // Results
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [verify, setVerify] = useState<VerifyResult | null>(null);
   const [execute, setExecute] = useState<ExecuteResult | null>(null);
@@ -456,7 +454,7 @@ export default function DemoPage() {
                 ))}
               </Card>
               <Card>
-                <h3 style={{ fontSize:15, fontWeight:700, marginBottom:16 }}>Crop & Plan</h3>
+                <h3 style={{ fontSize:15, fontWeight:700, marginBottom:16 }}>Crop &amp; Plan</h3>
                 <div style={{ marginBottom:12 }}>
                   <label style={{ fontSize:12, color:'#64748b', fontWeight:600, display:'block', marginBottom:4 }}>Crop</label>
                   <select value={form.crop} onChange={e => setForm(f=>({...f,crop:e.target.value}))}
@@ -535,7 +533,7 @@ export default function DemoPage() {
                         transition:'all 0.18s'
                       }}>
                       <div style={{ fontSize:20, marginBottom:4 }}>
-                        {ev==='drought'?'🏜️':ev==='flood'?'🌊':ev==='heatwave'?'🔥':'🌀'}
+                        {ev==='drought'?'🏙️':ev==='flood'?'🌊':ev==='heatwave'?'🔥':'🌀'}
                       </div>
                       <div style={{ fontSize:13, fontWeight:700, color: form.event_type===ev ? EVENT_COLORS[ev] : '#0f172a', textTransform:'capitalize' }}>{ev}</div>
                     </button>
