@@ -1,15 +1,23 @@
 """
-api/index.py  —  Vercel Python Serverless Entrypoint  (v4.0.1)
+api/index.py  —  Vercel Python Serverless Entrypoint  v5.0.0
 
-FIX: Vercel executes api/index.py with cwd=/var/task but sys.path does NOT
-include the repo root, so `from api.core import ...` raises ModuleNotFoundError.
-The two lines below inject the repo root (/var/task) into sys.path at import
-time — before any api.* submodule is touched.
+Fix: Vercel executes with cwd=/var/task. sys.path does NOT include repo root,
+so all `from api.*` imports fail. The lines below inject repo root into
+sys.path BEFORE any submodule is imported.
 """
 import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# --- everything below only runs after the path fix is in place ---
+# Inject repo root (/var/task) so `from api.xxx import ...` works
+_repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+
+# Also inject /var/task/api so relative imports inside api/ work
+_api_root = os.path.dirname(os.path.abspath(__file__))
+if _api_root not in sys.path:
+    sys.path.insert(0, _api_root)
+
+# --- Everything below runs after the path fix is in place ---
 from http.server import BaseHTTPRequestHandler
 import json
 from api.core.app import dispatch
@@ -25,6 +33,15 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         self._handle("POST")
+
+    def do_PUT(self):
+        self._handle("PUT")
+
+    def do_PATCH(self):
+        self._handle("PATCH")
+
+    def do_DELETE(self):
+        self._handle("DELETE")
 
     def _handle(self, method: str):
         length = int(self.headers.get("Content-Length", 0))
@@ -46,7 +63,7 @@ class handler(BaseHTTPRequestHandler):
             self._json(500, {
                 "error":  "Internal server error",
                 "detail": str(exc),
-                "trace":  traceback.format_exc()[-1200:],
+                "trace":  traceback.format_exc()[-2000:],
             })
             return
 
@@ -57,8 +74,8 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type",                 "application/json")
         self.send_header("Access-Control-Allow-Origin",  "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-IIE-Key")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-IIE-Key, Authorization")
         self.send_header("Content-Length",               str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
@@ -66,8 +83,8 @@ class handler(BaseHTTPRequestHandler):
     def _cors(self, code: int, body: bytes):
         self.send_response(code)
         self.send_header("Access-Control-Allow-Origin",  "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-IIE-Key")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-IIE-Key, Authorization")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
