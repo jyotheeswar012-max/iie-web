@@ -1,55 +1,87 @@
 """
-api/core/security.py
-API-key authentication + per-key rate limiting.
+Security middleware — rate limiting, CORS hardening, request ID injection.
 
-Flow:
-  1. Client sends header:  X-IIE-Key: <key>
-     OR query param:       ?key=<key>
-  2. Key validated against store.api_keys
-  3. Rate window (60s rolling) checked against key.rpm limit
-  4. Returns (ok: bool, tier: str, error_msg: str)
+Integration with main.py:
+    from core.security import setup_security
+    setup_security(app)  # call after app = FastAPI()
 """
-import time
-from api.core.store import load, save
-from api.core import logging as log
 
-OPEN_PATHS = {"/api/health", "/api/oracle/feed", "/api/ml/batch"}
+import os
+import uuid
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
-def check(path: str, key: str, client_ip: str) -> tuple:
-    """
-    Returns (allowed: bool, tier: str, reason: str)
-    """
-    # Open paths — no key required
-    if path in OPEN_PATHS:
-        return True, "open", ""
+# ---------------------------------------------------------------------------
+# CORS (tighten origins in production)
+# ---------------------------------------------------------------------------
+ALLOWED_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,https://iie-web.vercel.app,https://iie-web-git-main.vercel.app"
+).split(",")
 
-    if not key:
-        return False, "", "Missing X-IIE-Key header. Use key=iie-demo-2026 for demo access."
 
-    store = load()
-    keys  = store.get("api_keys", {})
+# ---------------------------------------------------------------------------
+# REQUEST ID + TIMING MIDDLEWARE
+# ---------------------------------------------------------------------------
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Injects X-Request-ID and X-Response-Time into every response."""
 
-    if key not in keys:
-        log.warn("auth_failed", key_prefix=key[:8], ip=client_ip)
-        return False, "", "Invalid API key."
+    async def dispatch(self, request: Request, call_next):
+        import time
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request.state.request_id = request_id
+        start = time.perf_counter()
+        response: Response = await call_next(request)
+        elapsed = round((time.perf_counter() - start) * 1000, 1)
+        response.headers["X-Request-ID"]    = request_id
+        response.headers["X-Response-Time"] = f"{elapsed}ms"
+        return response
 
-    meta  = keys[key]
-    tier  = meta["tier"]
-    rpm   = meta.get("rpm", 30)
 
-    # Rolling 60-second rate window per key
-    now   = time.time()
-    rlog  = store.get("rate_log", {})
-    hits  = [t for t in rlog.get(key, []) if now - t < 60]
+# ---------------------------------------------------------------------------
+# RATE LIMITER (slowapi)
+# ---------------------------------------------------------------------------
+def _make_limiter():
+    try:
+        from slowapi import Limiter
+        from slowapi.util import get_remote_address
+        return Limiter(key_func=get_remote_address)
+    except ImportError:
+        print("[Security] slowapi not installed — rate limiting disabled. Run: pip install slowapi")
+        return None
 
-    if len(hits) >= rpm:
-        log.warn("rate_limited", key_prefix=key[:8], tier=tier, hits=len(hits), rpm=rpm)
-        return False, tier, f"Rate limit exceeded ({rpm} req/min for {tier} tier). Retry after 60s."
+limiter = _make_limiter()
 
-    hits.append(now)
-    rlog[key] = hits
-    store["rate_log"] = rlog
-    save(store)
 
-    log.info("auth_ok", key_prefix=key[:8], tier=tier, rpm_used=len(hits))
-    return True, tier, ""
+# ---------------------------------------------------------------------------
+# SETUP FUNCTION
+# ---------------------------------------------------------------------------
+def setup_security(app: FastAPI):
+    """Call once after app = FastAPI() to attach all security middleware."""
+
+    # CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins    = ALLOWED_ORIGINS,
+        allow_credentials= True,
+        allow_methods    = ["GET", "POST", "OPTIONS"],
+        allow_headers    = ["*"],
+    )
+
+    # Request ID + timing
+    app.add_middleware(RequestIDMiddleware)
+
+    # Rate limiter (if available)
+    if limiter is not None:
+        try:
+            from slowapi import _rate_limit_exceeded_handler
+            from slowapi.errors import RateLimitExceeded
+            app.state.limiter = limiter
+            app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+        except Exception as e:
+            print(f"[Security] slowapi setup warning: {e}")
+
+    print(f"[Security] CORS origins: {ALLOWED_ORIGINS}")
+    print(f"[Security] Rate limiter: {'enabled' if limiter else 'disabled'}")
+    return app
