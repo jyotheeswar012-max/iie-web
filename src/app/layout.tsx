@@ -1,21 +1,25 @@
-import type { Metadata } from 'next'
-import './globals.css'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+import type { Metadata } from 'next';
+import './globals.css';
+import SBIHeader from '@/components/SBIHeader';
 
 export const metadata: Metadata = {
-  title: 'Invisible Insurance Engine | SBI GFF 2026',
-  description: 'Insurance that pays before you ask.',
-}
+  title: 'YONO-Oracle IIE · SBI GFF 2026',
+  description: 'India\'s first fully autonomous parametric crop insurance engine — oracle-verified, AI-quorum-governed, blockchain-audited, IMPS-settled.',
+  keywords: ['SBI','YONO','crop insurance','parametric','blockchain','India Stack','GFF 2026'],
+  openGraph: {
+    title: 'YONO-Oracle IIE — SBI Global Fintech Fest 2026',
+    description: 'Claim settlement: 6 months → <3 seconds. Zero forms. 100% autonomous.',
+    siteName: 'YONO-Oracle IIE',
+  },
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[#0a0e27]">
-        <Navbar />
-        <main>{children}</main>
-        <Footer />
+      <body style={{ margin:0, padding:0, background:'#f8fafc' }}>
+        <SBIHeader />
+        {children}
       </body>
     </html>
-  )
+  );
 }
