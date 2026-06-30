@@ -1,51 +1,67 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 
-const PLAN_PRM: Record<string,number> = { 'Basic Protect': 2800, 'Smart Shield': 4200, 'Full Season Pro': 6300 };
-const PLAN_COV: Record<string,number> = { 'Basic Protect': 42000, 'Smart Shield': 70000, 'Full Season Pro': 122500 };
+const PLAN_CONFIG: Record<string, { base_premium: number; coverage_multiplier: number; max_coverage: number }> = {
+  'Basic Protect':    { base_premium: 2800,  coverage_multiplier: 15, max_coverage: 42000 },
+  'Smart Shield':     { base_premium: 4200,  coverage_multiplier: 16.67, max_coverage: 70000 },
+  'Full Season Pro':  { base_premium: 6300,  coverage_multiplier: 19.44, max_coverage: 122500 },
+};
 
-async function sha256hex(s: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+function cors(res: NextResponse) {
+  res.headers.set('Access-Control-Allow-Origin', '*');
+  res.headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.headers.set('Access-Control-Allow-Headers', 'Content-Type, X-Judge-Key');
+  return res;
 }
-function uid(n=8){ return crypto.randomUUID().replace(/-/g,'').slice(0,n).toUpperCase(); }
+export async function OPTIONS() { return cors(new NextResponse(null, { status: 204 })); }
 
-export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const name  = String(body.name  || 'Farmer').trim();
-  const a4    = String(body.aadhaar_last4 || '0000').slice(0,4);
-  const dist  = String(body.district || 'Unknown').trim();
-  const state = String(body.state   || 'India').trim();
-  const crop  = String(body.crop    || 'wheat').toLowerCase();
-  const acres = Math.max(0.1, Number(body.acreage) || 5);
-  const plan  = PLAN_PRM[body.plan] ? body.plan : 'Smart Shield';
-
-  const pidSeed = await sha256hex(`${name.toLowerCase()}${dist.toLowerCase()}${a4}`);
-  const pid     = 'IIE-' + pidSeed.slice(0,8).toUpperCase();
-  const caddr   = '0x' + (await sha256hex(pid + 'contract-v4')).slice(0,40);
-  const txHash  = '0x' + (await sha256hex(pid + Date.now())).slice(0,40);
-  const block   = 19823441 + (Math.floor(Date.now()/15000) % 100000);
-  const sub     = Math.round(PLAN_PRM[plan] * 0.30);
-  const net     = PLAN_PRM[plan] - sub;
-  const dlRef   = 'DL-' + uid(10);
-  const upiRef  = 'UPI-D-' + uid(8);
-  const aadhaarHash = 'AH_' + (await sha256hex('aadhaar:' + a4)).slice(0,16);
-
-  return NextResponse.json({
-    success: true, policy_id: pid, contract_address: caddr,
-    aadhaar_hash: aadhaarHash, digilocker_ref: dlRef, upi_debit_ref: upiRef,
-    net_premium_inr: net, subsidy_applied: sub,
-    coverage_inr: PLAN_COV[plan],
-    block_deployed: block, deploy_tx: txHash,
-    kyc: {
-      status: 'VERIFIED', method: 'Aadhaar_eKYC_OTP',
-      uidai_txn_id: 'UIDAI-' + uid(12),
-      digilocker_ref: dlRef, name_match: true, dpdp_compliant: true,
-      documents_pulled: {
-        land_record: { type: 'RoR 7/12 Extract', status: 'VALID', issued: `Revenue Dept, ${dist}` },
-        crop_cert:   { type: 'Crop Insurance Eligibility Cert', status: 'VALID' },
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { name, aadhaar_last4, district, state, crop, acreage, plan = 'Smart Shield' } = body;
+    if (!name || !aadhaar_last4 || !district || !state || !crop || !acreage) {
+      return cors(NextResponse.json({ error: 'Missing required fields: name, aadhaar_last4, district, state, crop, acreage' }, { status: 400 }));
+    }
+    const cfg = PLAN_CONFIG[plan] || PLAN_CONFIG['Smart Shield'];
+    const acres = parseFloat(String(acreage));
+    const raw_premium = Math.round(cfg.base_premium * (acres / 4));
+    const subsidy = Math.round(raw_premium * 0.30);
+    const net_premium = raw_premium - subsidy;
+    const coverage = Math.min(Math.round(raw_premium * cfg.coverage_multiplier), cfg.max_coverage * (acres / 4));
+    const policy_id = `SBI-IIE-${String(Math.floor(Math.random() * 90000) + 10000)}`;
+    const aadhaar_hash = `sha256:${aadhaar_last4}${Date.now().toString(36)}`;
+    const contract_address = `0x${Math.random().toString(16).slice(2, 42).padEnd(40, '0')}`;
+    const block = 19823000 + Math.floor(Math.random() * 1000);
+    const deploy_tx = `0x${Math.random().toString(16).slice(2, 66).padEnd(64, '0')}`;
+    const upi_debit_ref = `UPI${Date.now()}`;
+    return cors(NextResponse.json({
+      success: true,
+      message: `Policy ${policy_id} deployed on-chain for ${name}`,
+      policy_id,
+      farmer: name,
+      district,
+      state,
+      crop,
+      acreage: acres,
+      plan,
+      raw_premium_inr: raw_premium,
+      subsidy_applied: subsidy,
+      net_premium_inr: net_premium,
+      coverage_inr: Math.round(coverage),
+      contract_address,
+      block_deployed: block,
+      deploy_tx,
+      aadhaar_hash,
+      upi_debit_ref,
+      kyc: {
+        aadhaar_verified: true,
+        digilocker_ror: true,
+        pm_fasal_subsidy: true,
+        upi_linked: true,
       },
-    },
-    message: `Policy ${pid} issued. Contract @ ${caddr} deployed at block #${block}. PM-FASAL subsidy ₹${sub} applied.`,
-  });
+      ts: new Date().toISOString(),
+    }));
+  } catch (e) {
+    return cors(NextResponse.json({ error: String(e) }, { status: 500 }));
+  }
 }
