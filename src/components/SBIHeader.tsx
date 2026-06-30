@@ -13,10 +13,8 @@ export default function SBIHeader() {
     fetch('/api/health').then(r => r.json()).then(setHealth).catch(() => {});
   }, []);
 
-  // Close menu on route change
   useEffect(() => { setMenuOpen(false); }, [pathname]);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
@@ -29,6 +27,7 @@ export default function SBIHeader() {
     { href: '/',             label: 'Home' },
     { href: '/demo',         label: '⚡ Demo' },
     { href: '/dashboard',   label: '📊 Dashboard' },
+    { href: '/agents',       label: '🤖 Agents' },
     { href: '/impact',       label: '🌾 Impact' },
     { href: '/blockchain',  label: '🔗 Audit' },
     { href: '/risk',         label: '🛰️ Risk' },
@@ -45,11 +44,10 @@ export default function SBIHeader() {
         .sbi-nav-link { color:#7d8590; font-size:11.5px; font-weight:600; text-decoration:none; padding:5px 9px; border-radius:7px; border:1px solid transparent; transition:all 0.15s; white-space:nowrap; }
         .sbi-nav-link:hover, .sbi-nav-link[aria-current='page'] { background:rgba(100,255,218,0.08); color:#64ffda; border-color:rgba(100,255,218,0.2); }
         .sbi-nav-link:focus-visible { outline:2px solid #64ffda; outline-offset:2px; }
-        @media (max-width: 768px) { .sbi-desktop-nav { display: none !important; } .sbi-hamburger { display: flex !important; } }
-        @media (min-width: 769px) { .sbi-mobile-nav { display: none !important; } }
+        @media (max-width: 900px) { .sbi-desktop-nav { display: none !important; } .sbi-hamburger { display: flex !important; } }
+        @media (min-width: 901px) { .sbi-mobile-nav { display: none !important; } }
       `}</style>
 
-      {/* ── SBI brand bar ── */}
       <div style={{ background:'linear-gradient(90deg,#0d1b4b 0%,#1a237e 60%,#1565c0 100%)', padding:'7px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <div style={{ background:'#fff', borderRadius:5, padding:'3px 9px', fontWeight:900, fontSize:17, color:'#1a237e', letterSpacing:'0.06em', lineHeight:1 }}>SBI</div>
@@ -67,7 +65,6 @@ export default function SBIHeader() {
         </div>
       </div>
 
-      {/* ── YONO product nav ── */}
       <div style={{ background:'linear-gradient(90deg,#0d1117,#0a0f1e,#030712)', padding:'8px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(100,255,218,0.1)', boxShadow:'0 2px 20px rgba(0,0,0,0.5)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <span style={{ fontSize:18 }}>🌾</span>
@@ -77,28 +74,24 @@ export default function SBIHeader() {
           </div>
         </div>
 
-        {/* Desktop nav */}
         <nav className="sbi-desktop-nav" style={{ display:'flex', gap:2, flexWrap:'wrap', alignItems:'center' }} aria-label="Main navigation">
           {NAV.map(({ href, label }) => (
             <Link key={href} href={href} className="sbi-nav-link" aria-current={pathname === href ? 'page' : undefined}>{label}</Link>
           ))}
         </nav>
 
-        {/* Hamburger (mobile) */}
         <button
           className="sbi-hamburger"
           style={{ display:'none', background:'transparent', border:'1px solid rgba(100,255,218,0.3)', borderRadius:8, padding:'6px 10px', color:'#64ffda', cursor:'pointer', alignItems:'center', gap:6 }}
           onClick={() => setMenuOpen(o => !o)}
           aria-label="Toggle navigation menu"
-          aria-expanded={menuOpen}
-        >
+          aria-expanded={menuOpen}>
           <span style={{ fontSize:16 }}>{menuOpen ? '✕' : '☰'}</span>
         </button>
       </div>
 
-      {/* Mobile dropdown */}
       {menuOpen && (
-        <div ref={menuRef} className="sbi-mobile-nav" style={{ background:'#0d1117', borderBottom:'1px solid rgba(100,255,218,0.1)', padding:'8px 16px 12px', display:'flex', flexDirection:'column', gap:4 }} aria-label="Mobile navigation">
+        <div ref={menuRef} className="sbi-mobile-nav" style={{ background:'#0d1117', borderBottom:'1px solid rgba(100,255,218,0.1)', padding:'8px 16px 12px', display:'flex', flexDirection:'column', gap:4 }}>
           {NAV.map(({ href, label }) => (
             <Link key={href} href={href} className="sbi-nav-link" style={{ display:'block', padding:'8px 12px' }} aria-current={pathname === href ? 'page' : undefined}>{label}</Link>
           ))}
