@@ -29,12 +29,21 @@ export default function OGImage() {
         position: 'relative',
       }}
     >
+      {/* Grid overlay — use separate divs to avoid rgba() inside backgroundImage */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage:
-            'linear-gradient(rgba(52,211,153,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(52,211,153,0.05) 1px,transparent 1px)',
+          backgroundImage: 'linear-gradient(#34d39908 1px, transparent 1px)',
+          backgroundSize: '60px 60px',
+          display: 'flex',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'linear-gradient(90deg, #34d39908 1px, transparent 1px)',
           backgroundSize: '60px 60px',
           display: 'flex',
         }}
@@ -46,8 +55,8 @@ export default function OGImage() {
           alignItems: 'center',
           gap: 10,
           marginBottom: 28,
-          background: 'rgba(52,211,153,0.12)',
-          border: '1px solid rgba(52,211,153,0.3)',
+          background: '#34d3991f',
+          border: '1px solid #34d3994d',
           borderRadius: 40,
           padding: '8px 20px',
         }}
@@ -88,7 +97,7 @@ export default function OGImage() {
       <div
         style={{
           fontSize: 22,
-          color: 'rgba(255,255,255,0.6)',
+          color: '#ffffff99',
           textAlign: 'center',
           maxWidth: 700,
           lineHeight: 1.5,
@@ -96,7 +105,7 @@ export default function OGImage() {
           display: 'flex',
         }}
       >
-        India's first fully autonomous parametric crop insurance engine
+        India&apos;s first fully autonomous parametric crop insurance engine
       </div>
 
       <div
@@ -111,8 +120,8 @@ export default function OGImage() {
           <div
             key={t}
             style={{
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.12)',
+              background: '#ffffff12',
+              border: '1px solid #ffffff1f',
               borderRadius: 8,
               padding: '8px 16px',
               fontSize: 15,
