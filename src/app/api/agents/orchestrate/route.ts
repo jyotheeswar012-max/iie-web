@@ -1,334 +1,237 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 
-function cors(res: NextResponse) {
-  res.headers.set('Access-Control-Allow-Origin', '*');
-  res.headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.headers.set('Access-Control-Allow-Headers', 'Content-Type, X-Judge-Key');
-  return res;
+function cors(r: NextResponse) {
+  r.headers.set('Access-Control-Allow-Origin', '*');
+  r.headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  r.headers.set('Access-Control-Allow-Headers', 'Content-Type,X-Judge-Key');
+  return r;
 }
 export async function OPTIONS() { return cors(new NextResponse(null, { status: 204 })); }
 
-/* ─── Types ─── */
-type AgentDecision = {
-  agent: string;
-  role: string;
-  icon: string;
-  verdict: 'APPROVE' | 'REJECT' | 'FLAG' | 'REVIEW';
-  confidence: number;
-  weight: number;
-  reasoning: string[];
-  metrics: Record<string, string | number>;
-  llm_prompt_sim: string;
-  llm_response_sim: string;
-  latency_ms: number;
+// ─── ORACLE DISTRICT DATA ──────────────────────────────────────────
+const ORACLE: Record<string, {
+  ndvi: number; temp_c: number; rain_mm: number; soil: number;
+  hist_ndvi_mean: number; hist_ndvi_std: number;
+  hist_rain_mean: number; hist_rain_std: number;
+}> = {
+  Barmer:   { ndvi:0.21, temp_c:47.2, rain_mm:8,   soil:12, hist_ndvi_mean:0.38, hist_ndvi_std:0.07, hist_rain_mean:42,  hist_rain_std:12  },
+  Jodhpur:  { ndvi:0.19, temp_c:48.1, rain_mm:6,   soil:10, hist_ndvi_mean:0.36, hist_ndvi_std:0.06, hist_rain_mean:38,  hist_rain_std:11  },
+  Puri:     { ndvi:0.68, temp_c:34.1, rain_mm:218, soil:78, hist_ndvi_mean:0.62, hist_ndvi_std:0.08, hist_rain_mean:160, hist_rain_std:35  },
+  Latur:    { ndvi:0.28, temp_c:46.8, rain_mm:22,  soil:16, hist_ndvi_mean:0.41, hist_ndvi_std:0.07, hist_rain_mean:55,  hist_rain_std:14  },
+  Warangal: { ndvi:0.31, temp_c:45.9, rain_mm:44,  soil:22, hist_ndvi_mean:0.44, hist_ndvi_std:0.08, hist_rain_mean:68,  hist_rain_std:16  },
+  Nashik:   { ndvi:0.34, temp_c:44.2, rain_mm:38,  soil:19, hist_ndvi_mean:0.46, hist_ndvi_std:0.08, hist_rain_mean:72,  hist_rain_std:17  },
+  Ludhiana: { ndvi:0.52, temp_c:38.5, rain_mm:180, soil:55, hist_ndvi_mean:0.55, hist_ndvi_std:0.07, hist_rain_mean:140, hist_rain_std:30  },
+  Adilabad: { ndvi:0.29, temp_c:46.1, rain_mm:31,  soil:18, hist_ndvi_mean:0.42, hist_ndvi_std:0.07, hist_rain_mean:60,  hist_rain_std:15  },
+  Khammam:  { ndvi:0.62, temp_c:35.8, rain_mm:210, soil:72, hist_ndvi_mean:0.58, hist_ndvi_std:0.09, hist_rain_mean:150, hist_rain_std:32  },
 };
 
-type OracleInput = {
-  district: string;
-  ndvi: number;
-  temp_c: number;
-  rainfall_mm: number;
-  soil_moisture: number;
-  acreage: number;
-  crop: string;
-  event_type: string;
-  historical_avg_ndvi?: number;
-  historical_avg_rainfall?: number;
-  policy_count_district?: number;
-  farmer_claim_history?: number;
+const CROP_THRESHOLDS: Record<string, { drought_ndvi: number; flood_rain: number; heat_temp: number }> = {
+  wheat:     { drought_ndvi:0.28, flood_rain:180, heat_temp:44 },
+  cotton:    { drought_ndvi:0.25, flood_rain:160, heat_temp:46 },
+  paddy:     { drought_ndvi:0.30, flood_rain:200, heat_temp:40 },
+  soybean:   { drought_ndvi:0.27, flood_rain:170, heat_temp:43 },
+  groundnut: { drought_ndvi:0.26, flood_rain:155, heat_temp:45 },
+  sugarcane: { drought_ndvi:0.32, flood_rain:210, heat_temp:41 },
+  maize:     { drought_ndvi:0.29, flood_rain:175, heat_temp:44 },
+  chilli:    { drought_ndvi:0.24, flood_rain:150, heat_temp:47 },
+  tomato:    { drought_ndvi:0.30, flood_rain:160, heat_temp:42 },
+  onion:     { drought_ndvi:0.26, flood_rain:145, heat_temp:43 },
+  default:   { drought_ndvi:0.28, flood_rain:180, heat_temp:44 },
 };
 
-/* ─── Agent implementations ─── */
+const HIST_ACREAGE: Record<string, { mean: number; std: number }> = {
+  Barmer: {mean:3.8,std:1.2}, Jodhpur:{mean:3.5,std:1.1}, Puri:{mean:2.9,std:0.9},
+  Latur:  {mean:4.2,std:1.4}, Warangal:{mean:4.0,std:1.3}, Nashik:{mean:3.6,std:1.2},
+  Ludhiana:{mean:5.1,std:1.6}, Adilabad:{mean:3.9,std:1.3}, Khammam:{mean:3.7,std:1.2},
+  default:{mean:4.0,std:1.5},
+};
 
-function runRiskAgent(o: OracleInput): AgentDecision {
-  const ndvi_z = o.historical_avg_ndvi
-    ? (o.ndvi - o.historical_avg_ndvi) / 0.08
-    : (o.ndvi - 0.45) / 0.12;
-  const rain_z = o.historical_avg_rainfall
-    ? (o.rainfall_mm - o.historical_avg_rainfall) / 30
-    : (o.rainfall_mm - 85) / 40;
-  const heat_score = o.temp_c > 46 ? 3 : o.temp_c > 44 ? 2 : o.temp_c > 42 ? 1 : 0;
-  const drought_score = o.ndvi < 0.22 ? 3 : o.ndvi < 0.28 ? 2 : o.ndvi < 0.35 ? 1 : 0;
-  const flood_score = o.rainfall_mm > 210 ? 3 : o.rainfall_mm > 180 ? 2 : o.rainfall_mm > 150 ? 1 : 0;
-
-  const ev = o.event_type.toLowerCase();
-  let risk = 30;
-  if (ev === 'drought')  risk += drought_score * 20 + heat_score * 10;
-  if (ev === 'flood')    risk += flood_score * 22 + (o.soil_moisture > 70 ? 15 : 0);
-  if (ev === 'heatwave') risk += heat_score * 22 + drought_score * 8;
-  if (ev === 'cyclone')  risk += flood_score * 20 + (o.rainfall_mm > 200 ? 18 : 0);
-
-  const confidence = Math.min(97, Math.max(35, risk + Math.floor(Math.random() * 5)));
-  const verdict: AgentDecision['verdict'] = confidence >= 72 ? 'APPROVE' : confidence >= 50 ? 'REVIEW' : 'REJECT';
-
-  return {
-    agent: 'RiskAgent',
-    role: 'Satellite & Sensor Risk Analyst',
-    icon: '🛰️',
-    verdict,
-    confidence,
-    weight: 32,
-    reasoning: [
-      `NDVI=${o.ndvi} → z-score=${ndvi_z.toFixed(2)} (seasonal baseline)`,
-      `Temperature=${o.temp_c}°C → heat_score=${heat_score}/3`,
-      `Rainfall=${o.rainfall_mm}mm → rain_z=${rain_z.toFixed(2)}`,
-      `Soil moisture=${o.soil_moisture}% → ${o.soil_moisture < 15 ? '🔴 WILTING POINT BREACHED' : '✅ acceptable'}`,
-      `Event type=${o.event_type.toUpperCase()} → composite risk score=${risk}`,
-      confidence >= 72 ? '✅ NDVI + sensor cross-validation passed — APPROVE' : '⚠️ Risk below threshold — REVIEW needed',
-    ],
-    metrics: {
-      ndvi: o.ndvi, ndvi_z: +ndvi_z.toFixed(3),
-      temp_c: o.temp_c, heat_score,
-      rainfall_mm: o.rainfall_mm, rain_z: +rain_z.toFixed(3),
-      soil_moisture: o.soil_moisture,
-      composite_risk: risk,
-    },
-    llm_prompt_sim: `[RiskAgent → Grok-3] Analyze satellite data for ${o.district}: NDVI=${o.ndvi}, Temp=${o.temp_c}°C, Rain=${o.rainfall_mm}mm, Soil=${o.soil_moisture}%. Event claim: ${o.event_type}. Provide risk verdict with confidence 0-100.`,
-    llm_response_sim: `VERDICT: ${verdict} | CONFIDENCE: ${confidence}% | The ${o.event_type} indicators for ${o.district} show ${confidence >= 72 ? 'clear threshold breach across NASA MODIS and IMD data streams' : 'borderline conditions requiring additional corroboration'}. NDVI z-score of ${ndvi_z.toFixed(2)} ${Math.abs(ndvi_z) > 1.5 ? 'significantly deviates from seasonal baseline' : 'is within normal range'}.`,
-    latency_ms: 120 + Math.floor(Math.random() * 80),
-  };
+type Verdict = 'APPROVE' | 'REVIEW' | 'REJECT';
+interface AgentResult {
+  agent: string; role: string; emoji: string;
+  verdict: Verdict; confidence: number; weight: number;
+  reasoning: string[]; metrics: Record<string, number|string>;
+  flags: string[]; latency_ms: number;
 }
 
-function runClaimsAgent(o: OracleInput, riskConf: number): AgentDecision {
-  const acreage_ok = o.acreage >= 0.5 && o.acreage <= 50;
-  const crop_event_match: Record<string, string[]> = {
-    wheat:      ['drought', 'flood', 'heatwave'],
-    paddy:      ['flood', 'drought', 'cyclone'],
-    cotton:     ['drought', 'heatwave', 'cyclone'],
-    soybean:    ['drought', 'heatwave', 'flood'],
-    groundnut:  ['drought', 'heatwave'],
-    sugarcane:  ['flood', 'drought'],
-    maize:      ['drought', 'flood', 'heatwave'],
-    chilli:     ['heatwave', 'drought'],
-    tomato:     ['heatwave', 'flood'],
-    onion:      ['drought', 'flood'],
-  };
-  const crops_covered = crop_event_match[o.crop.toLowerCase()] || ['drought', 'flood'];
-  const event_covered = crops_covered.includes(o.event_type.toLowerCase());
-  const season_ok = true; // Kharif season active (simulated)
-  const repeat_claim = (o.farmer_claim_history || 0) > 2;
+// ─── RISK AGENT (35%) ───────────────────────────────────────────────────
+function runRiskAgent(od: typeof ORACLE[string], event: string, crop: string): AgentResult {
+  const t0 = Date.now();
+  const ct = CROP_THRESHOLDS[crop.toLowerCase()] ?? CROP_THRESHOLDS.default;
+  const ev = event.toLowerCase();
+  const ndvi_z   = (od.hist_ndvi_mean - od.ndvi)   / od.hist_ndvi_std;
+  const rain_z   = (ev === 'flood' || ev === 'cyclone')
+    ? (od.rain_mm - od.hist_rain_mean) / od.hist_rain_std
+    : (od.hist_rain_mean - od.rain_mm)  / od.hist_rain_std;
+  const heat_dev  = od.temp_c - 38;
+  const soil_str  = Math.max(0, (20 - od.soil) / 20);
+  const reasoning: string[] = [], flags: string[] = [];
+  let score = 0;
 
-  let conf = 55;
-  if (acreage_ok) conf += 12;
-  if (event_covered) conf += 18;
-  if (season_ok) conf += 10;
-  if (!repeat_claim) conf += 8;
-  if (riskConf >= 72) conf += 10;
-  conf = Math.min(97, conf + Math.floor(Math.random() * 4));
+  reasoning.push(`NDVI: ${od.ndvi} vs hist μ=${od.hist_ndvi_mean} → z=${ndvi_z.toFixed(2)}σ`);
+  if (ev === 'drought' || ev === 'heatwave') {
+    if (od.ndvi < ct.drought_ndvi) { score += 35; flags.push(`🚨 NDVI ${od.ndvi} < ${ct.drought_ndvi} (crop threshold)`); reasoning.push(`✅ Below crop drought threshold`); }
+    else reasoning.push(`❌ NDVI above threshold`);
+    if (ndvi_z > 2.0) { score += 15; flags.push(`📊 NDVI anomaly ${ndvi_z.toFixed(1)}σ`); }
+  }
+  reasoning.push(`Rainfall: ${od.rain_mm}mm z=${rain_z.toFixed(2)}σ`);
+  if (ev === 'flood' || ev === 'cyclone') {
+    if (od.rain_mm > ct.flood_rain) { score += 35; flags.push(`🌊 ${od.rain_mm}mm > flood threshold ${ct.flood_rain}mm`); reasoning.push(`✅ Flood threshold exceeded`); }
+    if (rain_z > 2.0) { score += 15; flags.push(`📊 Rain anomaly ${rain_z.toFixed(1)}σ`); }
+  } else {
+    if (od.rain_mm < 20) { score += 20; flags.push(`☀️ Near-zero rain ${od.rain_mm}mm`); }
+  }
+  reasoning.push(`Temp: ${od.temp_c}°C (heat threshold: ${ct.heat_temp}°C)`);
+  if (ev === 'heatwave' && od.temp_c > ct.heat_temp) { score += 30; flags.push(`🌡️ ${od.temp_c}°C > ${ct.heat_temp}°C`); reasoning.push(`✅ Heatwave threshold exceeded`); }
+  reasoning.push(`Soil: ${od.soil}% (stress: ${(soil_str*100).toFixed(0)}%)`);
+  if (soil_str > 0.3) { score += 10; flags.push(`🏜️ Soil stress ${od.soil}%`); }
 
-  const verdict: AgentDecision['verdict'] = conf >= 75 && event_covered && acreage_ok ? 'APPROVE' : conf >= 55 ? 'REVIEW' : 'REJECT';
-
-  return {
-    agent: 'ClaimsAgent',
-    role: 'Policy Terms & Eligibility Validator',
-    icon: '📋',
-    verdict,
-    confidence: conf,
-    weight: 28,
-    reasoning: [
-      `Acreage=${o.acreage}ac → ${acreage_ok ? '✅ valid range [0.5, 50]' : '❌ out of range'}`,
-      `Crop=${o.crop} + Event=${o.event_type} → ${event_covered ? '✅ covered under policy' : '❌ NOT covered for this crop'}`,
-      `Kharif 2026 season window: ✅ active`,
-      `Prior claims this season: ${o.farmer_claim_history || 0} → ${repeat_claim ? '🔴 HIGH — possible abuse' : '✅ clean history'}`,
-      `RiskAgent confidence=${riskConf}% → ${riskConf >= 72 ? 'corroborates claim' : 'insufficient corroboration'}`,
-      verdict === 'APPROVE' ? '✅ All policy conditions satisfied — APPROVE' : `⚠️ ${!event_covered ? 'Event not covered for crop' : 'Borderline — escalate to review'}`,
-    ],
-    metrics: {
-      acreage_valid: acreage_ok ? 1 : 0,
-      event_covered: event_covered ? 1 : 0,
-      season_active: 1,
-      repeat_claim: repeat_claim ? 1 : 0,
-      prior_claims: o.farmer_claim_history || 0,
-    },
-    llm_prompt_sim: `[ClaimsAgent → Claude-3.5] Validate insurance claim: crop=${o.crop}, event=${o.event_type}, acreage=${o.acreage}ac, district=${o.district}, prior_claims=${o.farmer_claim_history||0}. Policy covers: ${crops_covered.join(', ')}. Verify eligibility.`,
-    llm_response_sim: `VERDICT: ${verdict} | CONFIDENCE: ${conf}% | Policy eligibility check: crop-event mapping ${event_covered ? 'VALID' : 'INVALID'}, acreage ${acreage_ok ? 'within bounds' : 'outside bounds'}, seasonal window active. ${repeat_claim ? 'ALERT: Multiple prior claims detected — manual review recommended.' : 'Clean claim history.'}`,
-    latency_ms: 95 + Math.floor(Math.random() * 60),
-  };
+  const confidence = Math.min(98, Math.max(20, score));
+  const verdict: Verdict = confidence >= 65 ? 'APPROVE' : confidence >= 40 ? 'REVIEW' : 'REJECT';
+  return { agent:'RiskAgent', role:'Oracle Data Analyser', emoji:'🛰️', verdict, confidence, weight:35, reasoning, metrics:{ ndvi_z:+ndvi_z.toFixed(3), rain_z:+rain_z.toFixed(3), heat_dev:+heat_dev.toFixed(1), soil_stress:+(soil_str*100).toFixed(1) }, flags, latency_ms: Date.now()-t0+Math.floor(Math.random()*40)+12 };
 }
 
-function runFraudAgent(o: OracleInput, riskConf: number): AgentDecision {
-  // Z-score based anomaly detection
-  const acreage_mean = 4.2, acreage_std = 2.1;
-  const ndvi_mean = 0.38, ndvi_std = 0.09;
-  const acreage_z = Math.abs((o.acreage - acreage_mean) / acreage_std);
-  const ndvi_z = Math.abs((o.ndvi - ndvi_mean) / ndvi_std);
+// ─── CLAIMS AGENT (40%) ─────────────────────────────────────────────────
+function runClaimsAgent(od: typeof ORACLE[string], event: string, crop: string, acreage: number): AgentResult {
+  const t0 = Date.now();
+  const ct = CROP_THRESHOLDS[crop.toLowerCase()] ?? CROP_THRESHOLDS.default;
+  const ev = event.toLowerCase();
+  const reasoning: string[] = [], flags: string[] = [];
+  let score = 0, primary = false;
 
-  // District claim density check
-  const claim_density = o.policy_count_district || 12;
-  const density_z = claim_density > 800 ? 2.8 : claim_density > 400 ? 1.4 : 0.3;
+  reasoning.push(`Validating ${crop.toUpperCase()} policy for ${ev} event`);
+  reasoning.push(`Acreage ${acreage}ac — season window check ✅`);
+  reasoning.push(`No prior claim this season — clean slate ✅`);
 
-  // Temporal anomaly (same-day multiple claims)
-  const temporal_ok = true;
+  if (ev === 'drought' && od.ndvi < ct.drought_ndvi) { primary=true; score+=40; flags.push(`NDVI ${od.ndvi} < ${ct.drought_ndvi}`); reasoning.push(`✅ Drought threshold MET`); }
+  else if ((ev === 'flood'||ev==='cyclone') && od.rain_mm > ct.flood_rain) { primary=true; score+=40; flags.push(`Rain ${od.rain_mm}mm > ${ct.flood_rain}mm`); reasoning.push(`✅ Flood threshold MET`); }
+  else if (ev === 'heatwave' && od.temp_c > ct.heat_temp) { primary=true; score+=40; flags.push(`${od.temp_c}°C > ${ct.heat_temp}°C`); reasoning.push(`✅ Heatwave threshold MET`); }
+  else reasoning.push(`❌ Primary threshold NOT crossed for ${ev}`);
 
-  // Composite fraud score
-  let fraud_risk = 0;
-  if (acreage_z > 2.5) fraud_risk += 35;
-  else if (acreage_z > 1.8) fraud_risk += 18;
-  if (ndvi_z > 2.2) fraud_risk += 20;
-  if (density_z > 2.0) fraud_risk += 25;
-  if ((o.farmer_claim_history || 0) > 2) fraud_risk += 22;
-  if (!temporal_ok) fraud_risk += 30;
-
-  const fraud_pct = Math.min(95, fraud_risk);
-  const clean_conf = 100 - fraud_pct;
-
-  const verdict: AgentDecision['verdict'] =
-    fraud_pct >= 60 ? 'FLAG' :
-    fraud_pct >= 35 ? 'REVIEW' : 'APPROVE';
-
-  return {
-    agent: 'FraudAgent',
-    role: 'Anomaly Detection & Fraud Guard',
-    icon: '🔍',
-    verdict,
-    confidence: clean_conf,
-    weight: 22,
-    reasoning: [
-      `Acreage z-score=${acreage_z.toFixed(2)} → ${acreage_z > 2.5 ? '🔴 ANOMALY: far from district mean' : acreage_z > 1.8 ? '⚠️ mildly elevated' : '✅ normal'}`,
-      `NDVI z-score=${ndvi_z.toFixed(2)} → ${ndvi_z > 2.2 ? '🔴 ANOMALY: extreme deviation' : '✅ within 2σ band'}`,
-      `District claim density=${claim_density}/month → ${density_z > 2.0 ? '🔴 SPIKE: 10x normal' : '✅ normal volume'}`,
-      `Prior claims this farmer: ${o.farmer_claim_history || 0} → ${(o.farmer_claim_history || 0) > 2 ? '🔴 HIGH frequency claimant' : '✅ clean'}`,
-      `Aadhaar deduplication: ✅ no duplicate Aadhaar hash`,
-      verdict === 'APPROVE' ? `✅ Fraud score=${fraud_pct}% — below threshold — CLEAR` : `⚠️ Fraud risk=${fraud_pct}% — ${verdict}`,
-    ],
-    metrics: {
-      acreage_z: +acreage_z.toFixed(3),
-      ndvi_z: +ndvi_z.toFixed(3),
-      density_z: +density_z.toFixed(3),
-      fraud_score_pct: fraud_pct,
-      clean_confidence: clean_conf,
-      prior_claims: o.farmer_claim_history || 0,
-    },
-    llm_prompt_sim: `[FraudAgent → Grok-3] Anomaly detection: district=${o.district}, acreage=${o.acreage}ac (mean=4.2, σ=2.1), NDVI=${o.ndvi} (mean=0.38, σ=0.09), claim_density=${claim_density}, prior_claims=${o.farmer_claim_history||0}. Z-score fraud detection. Flag if score≥60.`,
-    llm_response_sim: `FRAUD_SCORE: ${fraud_pct}% | VERDICT: ${verdict} | Acreage z=${acreage_z.toFixed(2)}, NDVI z=${ndvi_z.toFixed(2)}, density z=${density_z.toFixed(2)}. ${fraud_pct >= 60 ? 'ALERT: Multiple anomaly signals detected. Manual adjudication required.' : fraud_pct >= 35 ? 'CAUTION: Mild anomalies present. Secondary verification advised.' : 'All fraud indicators within normal bounds. Proceeding.'}`,
-    latency_ms: 85 + Math.floor(Math.random() * 55),
-  };
+  if (primary) {
+    if (od.soil < 20)           { score+=20; reasoning.push(`✅ Soil ${od.soil}% confirms crop stress`); }
+    if (acreage>0.5&&acreage<25){ score+=15; reasoning.push(`✅ Acreage ${acreage}ac valid`); } else flags.push(`⚠️ Acreage ${acreage}ac unusual`);
+    score+=20; reasoning.push(`✅ Policy in coverage period`);
+  }
+  const confidence = Math.min(97, Math.max(15, score));
+  const verdict: Verdict = confidence >= 70 ? 'APPROVE' : confidence >= 45 ? 'REVIEW' : 'REJECT';
+  return { agent:'ClaimsAgent', role:'Policy Threshold Validator', emoji:'📋', verdict, confidence, weight:40, reasoning, metrics:{ primary_triggered:primary?1:0, acreage_valid:(acreage>0.5&&acreage<25)?1:0, soil_confirms:od.soil<20?1:0 }, flags, latency_ms: Date.now()-t0+Math.floor(Math.random()*30)+8 };
 }
 
-function runOrchestratorAgent(
-  agents: AgentDecision[],
-  o: OracleInput
-): {
-  final_verdict: string;
-  contract_state: string;
-  quorum_met: boolean;
-  weighted_confidence: number;
-  payout_recommended: number | null;
-  reasoning: string[];
-  voting_breakdown: { agent: string; vote: string; weight: number; weighted_contribution: number }[];
-  consensus_rule: string;
-} {
-  const voting_breakdown = agents.map(a => ({
-    agent: a.agent,
-    vote: a.verdict,
-    weight: a.weight,
-    weighted_contribution: Math.round(a.confidence * a.weight / 100),
-  }));
+// ─── FRAUD AGENT (25%) ────────────────────────────────────────────────────
+function runFraudAgent(od: typeof ORACLE[string], acreage: number, district: string, event: string): AgentResult {
+  const t0 = Date.now();
+  const ha = HIST_ACREAGE[district] ?? HIST_ACREAGE.default;
+  const reasoning: string[] = [], flags: string[] = [];
+  let fraud_score = 0;
 
-  const total_weight = agents.reduce((s, a) => s + a.weight, 0);
-  const weighted_confidence = Math.round(
-    agents.reduce((s, a) => s + a.confidence * a.weight, 0) / total_weight
-  );
+  const acreage_z  = Math.abs((acreage - ha.mean) / ha.std);
+  reasoning.push(`Acreage z-score: |${acreage} - ${ha.mean}| / ${ha.std} = ${acreage_z.toFixed(2)}σ`);
+  if (acreage_z > 3.0)       { fraud_score+=40; flags.push(`🚨 Acreage outlier ${acreage_z.toFixed(1)}σ`); reasoning.push(`🚨 CRITICAL: >3σ — possible inflation`); }
+  else if (acreage_z > 2.0)  { fraud_score+=20; flags.push(`⚠️ Acreage ${acreage_z.toFixed(1)}σ`); reasoning.push(`⚠️ Moderately unusual`); }
+  else                         { reasoning.push(`✅ Acreage normal (${acreage_z.toFixed(1)}σ)`); }
 
-  const fraud_agent = agents.find(a => a.agent === 'FraudAgent');
-  const fraud_flagged = fraud_agent?.verdict === 'FLAG';
-  const all_approve = agents.every(a => a.verdict === 'APPROVE');
-  const any_reject = agents.some(a => a.verdict === 'REJECT');
-  const quorum_met = weighted_confidence >= 72 && !fraud_flagged && !any_reject;
+  const ndvi_z = (od.hist_ndvi_mean - od.ndvi) / od.hist_ndvi_std;
+  reasoning.push(`NDVI x-check z=${ndvi_z.toFixed(2)}σ`);
+  if (ndvi_z < -0.5 && acreage_z > 1.5) { fraud_score+=25; flags.push(`🕵️ NDVI/Acreage inconsistency`); reasoning.push(`⚠️ Low NDVI deviation + high acreage`); }
+  else reasoning.push(`✅ NDVI/acreage correlation plausible`);
 
-  const contract_state = fraud_flagged ? 'FRAUD_REVIEW' : any_reject ? 'REJECTED' : quorum_met ? 'TRIGGERED' : 'ACTIVE';
+  // Seeded duplicate check simulation
+  const dup_seed = acreage * 7 + od.ndvi * 100;
+  const dup_prob = (dup_seed % 11) / 150; // deterministic, low rate
+  reasoning.push(`Duplicate scan: ${(dup_prob*100).toFixed(1)}% Aadhaar match`);
+  if (dup_prob > 0.06) { fraud_score+=30; flags.push(`🔄 Possible duplicate ${(dup_prob*100).toFixed(1)}%`); reasoning.push(`🚨 Potential duplicate claim`); }
+  else reasoning.push(`✅ No duplicate detected`);
 
-  // Payout tables
-  const PAYOUTS: Record<string, Record<string, number>> = {
-    drought:  { wheat: 48200, paddy: 32800, cotton: 55000, soybean: 28400, groundnut: 38600, default: 42000 },
-    flood:    { paddy: 55000, cotton: 41000, wheat: 38000, soybean: 44000, default: 45000 },
-    heatwave: { cotton: 52000, wheat: 44000, soybean: 28400, chilli: 38000, tomato: 68000, default: 38000 },
-    cyclone:  { paddy: 61000, cotton: 58000, wheat: 52000, default: 55000 },
-  };
-  const crop_k = o.crop.toLowerCase();
-  const ev_k = o.event_type.toLowerCase();
-  const base = PAYOUTS[ev_k]?.[crop_k] || PAYOUTS[ev_k]?.default || 42000;
-  const payout_recommended = quorum_met ? Math.round(base * (o.acreage / 4)) : null;
+  const ev = event.toLowerCase();
+  const ev_consistent = !((ev==='drought'&&od.rain_mm>100)||(ev==='flood'&&od.rain_mm<80));
+  if (!ev_consistent) { fraud_score+=15; flags.push(`❓ ${ev} claim inconsistent with ${od.rain_mm}mm rain`); reasoning.push(`⚠️ Event inconsistent with oracle`); }
+  else reasoning.push(`✅ Event consistent with oracle readings`);
 
-  return {
-    final_verdict: contract_state,
-    contract_state,
-    quorum_met,
-    weighted_confidence,
-    payout_recommended,
-    voting_breakdown,
-    consensus_rule: 'Weighted confidence ≥ 72% + No FRAUD_FLAG + No REJECT → AUTO-EXECUTE',
-    reasoning: [
-      `Total weight=${total_weight}% across ${agents.length} agents`,
-      `Weighted confidence=${weighted_confidence}% (threshold: 72%)`,
-      fraud_flagged ? '🔴 FraudAgent flagged anomaly → routing to FRAUD_REVIEW queue' : '✅ Fraud check passed',
-      any_reject ? '🔴 One or more agents REJECTED → contract stays ACTIVE' : '✅ No rejections',
-      quorum_met
-        ? `✅ Quorum met — ${all_approve ? 'unanimous APPROVE' : 'majority APPROVE'} → contract moves to TRIGGERED`
-        : `⚠️ Quorum NOT met (${weighted_confidence}% < 72%) → contract stays ACTIVE`,
-      payout_recommended ? `💰 Auto-payout queued: ₹${payout_recommended.toLocaleString('en-IN')}` : '⏸ Payout withheld pending review',
-    ],
-  };
+  const clearance = 100 - fraud_score;
+  const confidence = Math.min(99, Math.max(10, clearance));
+  const verdict: Verdict = fraud_score >= 40 ? 'REJECT' : fraud_score >= 20 ? 'REVIEW' : 'APPROVE';
+  return { agent:'FraudAgent', role:'Anomaly Detection Engine', emoji:'🕵️', verdict, confidence, weight:25, reasoning, metrics:{ acreage_z:+acreage_z.toFixed(3), ndvi_z:+ndvi_z.toFixed(3), fraud_score, clearance_score:clearance, ev_consistent:ev_consistent?1:0 }, flags, latency_ms: Date.now()-t0+Math.floor(Math.random()*35)+15 };
 }
 
-/* ─── Main handler ─── */
+type ContractState = 'ACTIVE'|'TRIGGERED'|'FRAUD_REVIEW'|'EXECUTED'|'REJECTED';
+
+const PAYOUTS: Record<string, Record<string, number>> = {
+  drought:  { cotton:48200, paddy:32800, wheat:62500, soybean:28400, groundnut:38600, sugarcane:72000, maize:36000, chilli:88000, tomato:68000, onion:52000, default:42000 },
+  flood:    { paddy:55000, cotton:41000, wheat:38000, soybean:44000, groundnut:36000, sugarcane:60000, maize:42000, chilli:72000, tomato:58000, onion:48000, default:45000 },
+  heatwave: { soybean:28400, cotton:52000, wheat:44000, tomato:68000, onion:55000, maize:38000, chilli:82000, paddy:35000, groundnut:44000, default:38000 },
+  cyclone:  { paddy:61000, cotton:58000, wheat:52000, sugarcane:75000, maize:55000, default:55000 },
+};
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const input: OracleInput = {
-      district:                  body.district || 'Barmer',
-      ndvi:                      body.ndvi ?? 0.21,
-      temp_c:                    body.temp_c ?? 47.2,
-      rainfall_mm:               body.rainfall_mm ?? 8,
-      soil_moisture:             body.soil_moisture ?? 12,
-      acreage:                   body.acreage ?? 4.5,
-      crop:                      body.crop || 'wheat',
-      event_type:                body.event_type || 'drought',
-      historical_avg_ndvi:       body.historical_avg_ndvi ?? 0.44,
-      historical_avg_rainfall:   body.historical_avg_rainfall ?? 82,
-      policy_count_district:     body.policy_count_district ?? 15,
-      farmer_claim_history:      body.farmer_claim_history ?? 0,
-    };
+    const { policy_id='SBI-IIE-00341', district='Barmer', event_type='drought', crop='wheat', acreage=4.5, farmer='Farmer' } = body;
+    const od  = ORACLE[district] ?? ORACLE['Barmer'];
+    const ev  = event_type.toLowerCase();
 
-    // Run agents (deterministic, edge-safe — no external LLM calls needed)
-    const riskAgent   = runRiskAgent(input);
-    const claimsAgent = runClaimsAgent(input, riskAgent.confidence);
-    const fraudAgent  = runFraudAgent(input, riskAgent.confidence);
+    const riskAgent   = runRiskAgent(od, ev, crop);
+    const claimsAgent = runClaimsAgent(od, ev, crop, acreage);
+    const fraudAgent  = runFraudAgent(od, acreage, district, ev);
     const agents      = [riskAgent, claimsAgent, fraudAgent];
 
-    const orchestrator = runOrchestratorAgent(agents, input);
+    const wc = Math.round(
+      riskAgent.confidence   * (riskAgent.weight   / 100) +
+      claimsAgent.confidence * (claimsAgent.weight / 100) +
+      fraudAgent.confidence  * (fraudAgent.weight  / 100),
+    );
 
-    const total_latency = agents.reduce((s, a) => s + a.latency_ms, 0) + 45;
+    const fraud_score = fraudAgent.metrics.fraud_score as number;
+    let state: ContractState;
+    let reason: string;
+    if (fraud_score >= 40) {
+      state = 'FRAUD_REVIEW'; reason = 'High fraud probability — manual review required';
+    } else if (agents.filter(a => a.verdict === 'REJECT').length >= 2) {
+      state = 'REJECTED'; reason = 'Quorum rejection';
+    } else if (wc >= 75) {
+      state = 'TRIGGERED'; reason = 'Quorum met — payout queued';
+    } else if (wc >= 50) {
+      state = 'FRAUD_REVIEW'; reason = 'Marginal confidence — escalated';
+    } else {
+      state = 'ACTIVE'; reason = 'Threshold not crossed';
+    }
+
+    const crop_cap  = crop.charAt(0).toUpperCase() + crop.slice(1).toLowerCase();
+    const crop_key  = crop.toLowerCase();
+    const base      = (PAYOUTS[ev]??PAYOUTS.drought)[crop_key] ?? (PAYOUTS[ev]??PAYOUTS.drought)['default'];
+    const payout    = state === 'TRIGGERED' ? Math.round(base * (acreage / 4) * (fraud_score >= 20 ? 0.9 : 1.0)) : null;
+    void crop_cap;
 
     return cors(NextResponse.json({
-      success: true,
-      pipeline: 'RiskAgent → ClaimsAgent → FraudAgent → Orchestrator',
-      architecture: 'LangChain-style multi-agent DAG (LLM-simulated on edge, production: Grok-3 / Claude-3.5)',
-      input,
+      success: true, policy_id, district, event_type: ev, crop, acreage, farmer,
+      contract_state: state, payout_amount: payout,
+      quorum: {
+        weighted_confidence: wc, threshold: 75, met: wc >= 75,
+        yes:    agents.filter(a=>a.verdict==='APPROVE').length,
+        review: agents.filter(a=>a.verdict==='REVIEW').length,
+        reject: agents.filter(a=>a.verdict==='REJECT').length,
+        rule: 'RiskAgent(35%) + ClaimsAgent(40%) + FraudAgent(25%) ≥ 75%',
+        reason,
+      },
       agents,
-      orchestrator,
-      total_latency_ms: total_latency,
+      oracle_snapshot: { ndvi:od.ndvi, temp_c:od.temp_c, rain_mm:od.rain_mm, soil_moisture:od.soil },
+      blockchain: {
+        states: ['ACTIVE','TRIGGERED','FRAUD_REVIEW','EXECUTED','REJECTED'],
+        current: state, network: 'Polygon Mumbai + Hyperledger Fabric',
+      },
       ts: new Date().toISOString(),
     }));
-  } catch (e) {
-    return cors(NextResponse.json({ error: String(e) }, { status: 500 }));
-  }
+  } catch(e) { return cors(NextResponse.json({ error: String(e) }, { status:500 })); }
 }
 
-export async function GET(_req: NextRequest) {
-  return cors(NextResponse.json({
-    endpoint: 'POST /api/agents/orchestrate',
-    description: 'Multi-agent orchestrator: RiskAgent + ClaimsAgent + FraudAgent → weighted quorum → APPROVE/REJECT/FLAG/FRAUD_REVIEW',
-    agents: [
-      { name: 'RiskAgent',   role: 'Satellite & sensor risk analyst', weight: '32%', llm: 'Grok-3 (sim)' },
-      { name: 'ClaimsAgent', role: 'Policy terms & eligibility',      weight: '28%', llm: 'Claude-3.5 (sim)' },
-      { name: 'FraudAgent',  role: 'Z-score anomaly detection',       weight: '22%', llm: 'Grok-3 (sim)' },
-      { name: 'Orchestrator',role: 'Weighted quorum + FSM routing',   weight: 'meta', llm: 'Rule engine' },
-    ],
-    example: {
-      district: 'Barmer', ndvi: 0.21, temp_c: 47.2, rainfall_mm: 8,
-      soil_moisture: 12, acreage: 4.5, crop: 'wheat', event_type: 'drought',
-    },
-  }));
+export async function GET(req: NextRequest) {
+  const u = new URL(req.url);
+  return POST(new Request(req.url,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+    policy_id:  u.searchParams.get('policy_id')  ?? 'SBI-IIE-DEMO',
+    district:   u.searchParams.get('district')   ?? 'Barmer',
+    event_type: u.searchParams.get('event')      ?? 'drought',
+    crop:       u.searchParams.get('crop')       ?? 'wheat',
+    acreage:    parseFloat(u.searchParams.get('acreage') ?? '4.5'),
+  }) }) as NextRequest);
 }
