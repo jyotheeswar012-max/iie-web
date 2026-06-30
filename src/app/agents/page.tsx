@@ -1,346 +1,582 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 
-type Decision = 'APPROVE' | 'REJECT' | 'FRAUD_REVIEW';
-type ContractState = 'ACTIVE' | 'TRIGGERED' | 'FRAUD_REVIEW';
+// ─── Types ────────────────────────────────────────────────────────
+type AgentVerdict = 'APPROVE' | 'REJECT' | 'REVIEW';
+type ContractState = 'ACTIVE' | 'TRIGGERED' | 'FRAUD_REVIEW' | 'EXECUTED' | 'REJECTED';
+type WeatherCode = 'HVY_RAIN'|'MOD_RAIN'|'LT_RAIN'|'HEAT_WAVE'|'HOT_DRY'|'CLEAR';
 
 interface AgentResult {
-  agent: string;
-  role: string;
-  model: string;
-  weight: string;
-  decision: Decision;
-  confidence: number;
-  reasoning: string[];
-  fraud_flags?: string[];
-  fraud_score?: number;
-  risk_score?: number;
-  z_scores?: Record<string, { value: number; threshold: number; flagged: boolean }>;
-  checks?: Record<string, { pass: boolean; detail: string }>;
-  features?: Record<string, number>;
+  agent: string; role: string; emoji: string;
+  verdict: AgentVerdict; confidence: number; weight: number;
+  reasoning: string[]; flags: string[];
+  metrics: Record<string, number|string>; latency_ms: number;
 }
-
 interface OrchestrateResult {
-  policy_id: string;
-  district: string;
-  event_type: string;
-  crop: string;
-  acreage: number;
+  policy_id: string; district: string; event_type: string; crop: string;
+  contract_state: ContractState; payout_amount: number|null;
+  quorum: { weighted_confidence: number; threshold: number; met: boolean; yes: number; review: number; reject: number; rule: string; reason: string; };
   agents: AgentResult[];
-  orchestrator: {
-    quorum_confidence: number;
-    quorum_met: boolean;
-    quorum_rule: string;
-    approve_count: number;
-    total_agents: number;
-    fraud_review: boolean;
-    contract_state: ContractState;
-    decision_rationale: string;
-  };
+  oracle_snapshot: { ndvi: number; temp_c: number; rain_mm: number; soil: number; };
+  blockchain: { previous_state: string; new_state: string; valid: boolean; states: string[]; note: string; };
   ts: string;
 }
-
-const DISTRICTS = ['Barmer','Jodhpur','Latur','Nashik','Warangal','Khammam','Puri','Ludhiana','Adilabad'];
-const CROPS     = ['wheat','paddy','cotton','soybean','groundnut','sugarcane','maize','chilli','tomato','onion'];
-const EVENTS    = ['drought','flood','heatwave','cyclone'];
-
-const AGENT_COLOR: Record<string, string> = {
-  RiskAgent:   '#3b82f6',
-  ClaimsAgent: '#10b981',
-  FraudAgent:  '#f59e0b',
-};
-const AGENT_ICON: Record<string, string> = {
-  RiskAgent:   '🛰️',
-  ClaimsAgent: '📋',
-  FraudAgent:  '🔍',
-};
-const DEC_COLOR: Record<string, string> = {
-  APPROVE:      '#22c55e',
-  REJECT:       '#ef4444',
-  FRAUD_REVIEW: '#f59e0b',
-};
-const STATE_COLOR: Record<string, string> = {
-  ACTIVE:       '#64748b',
-  TRIGGERED:    '#22c55e',
-  FRAUD_REVIEW: '#f59e0b',
-};
-
-function AnimBar({ value, color, delay = 0 }: { value: number; color: string; delay?: number }) {
-  const [w, setW] = useState(0);
-  useEffect(() => { const t = setTimeout(() => setW(value), delay + 200); return () => clearTimeout(t); }, [value, delay]);
-  return (
-    <div style={{ background: '#1e293b', borderRadius: 6, height: 10, overflow: 'hidden' }}>
-      <div style={{ width: `${w}%`, background: `linear-gradient(90deg,${color}88,${color})`, height: 10, borderRadius: 6, transition: 'width 1.2s cubic-bezier(0.4,0,0.2,1)', boxShadow: `0 0 8px ${color}55` }} />
-    </div>
-  );
+interface DailyWeather {
+  date: string; temp_c: number; temp_max: number; temp_min: number;
+  rainfall_mm: number; humidity_pct: number; wind_speed_kmh: number;
+  wind_direction: string; ndvi: number; soil_moisture_pct: number;
+  heat_index_c: number; imd_weather_code: WeatherCode;
+  event_probabilities: Record<string, number>;
+  most_likely_event: string;
+}
+interface WeatherResult {
+  district: string; state: string;
+  period: { from: string; days: number };
+  enso: { phase: string; rain_multiplier: number; temp_offset: number };
+  summary: { avg_temp_c: number; max_temp_c: number; total_rainfall_mm: number; avg_ndvi: number; avg_soil_pct: number; alert_days: number; anomaly_pct: number };
+  daily: DailyWeather[];
 }
 
-function AgentCard({ a, idx, open, onToggle }: { a: AgentResult; idx: number; open: boolean; onToggle: () => void }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setMounted(true), idx * 250); return () => clearTimeout(t); }, [idx]);
-  const col   = AGENT_COLOR[a.agent] || '#64ffda';
-  const icon  = AGENT_ICON[a.agent]  || '🤖';
-  const dcol  = DEC_COLOR[a.decision] || '#94a3b8';
-  const isOk  = a.decision === 'APPROVE';
-  const isFr  = a.decision === 'FRAUD_REVIEW';
+// ─── Constants ───────────────────────────────────────────────────────
+const DISTRICTS = ['Barmer','Jodhpur','Puri','Latur','Warangal','Nashik','Ludhiana','Adilabad','Khammam'];
+const CROPS     = ['wheat','cotton','paddy','soybean','groundnut','sugarcane','maize','chilli','tomato','onion'];
+const EVENTS    = ['drought','flood','heatwave','cyclone'];
+
+const STATE_META: Record<ContractState, { color: string; bg: string; border: string; emoji: string; label: string; desc: string }> = {
+  ACTIVE:       { color:'#34d399', bg:'#052e16', border:'#166534', emoji:'🟢', label:'Active',       desc:'Policy live — monitoring oracle feeds' },
+  TRIGGERED:    { color:'#fbbf24', bg:'#1c1400', border:'#854d0e', emoji:'⚡',    label:'Triggered',    desc:'Quorum met — payout queued for IMPS' },
+  FRAUD_REVIEW: { color:'#f97316', bg:'#1c0a00', border:'#9a3412', emoji:'🕵️', label:'Fraud Review', desc:'Anomaly detected — under review' },
+  EXECUTED:     { color:'#4ade80', bg:'#052e16', border:'#166534', emoji:'✅',    label:'Executed',     desc:'Payout completed — IMPS credited' },
+  REJECTED:     { color:'#f87171', bg:'#2d0a0a', border:'#7f1d1d', emoji:'❌',    label:'Rejected',     desc:'Claim rejected — quorum not met' },
+};
+
+const WC_META: Record<WeatherCode, { emoji: string; label: string; color: string }> = {
+  HVY_RAIN:  { emoji:'🌧️', label:'Heavy Rain',  color:'#38bdf8' },
+  MOD_RAIN:  { emoji:'🌦️', label:'Mod Rain',    color:'#60a5fa' },
+  LT_RAIN:   { emoji:'🌤️', label:'Light Rain',  color:'#93c5fd' },
+  HEAT_WAVE: { emoji:'🔥', label:'Heat Wave',  color:'#f87171' },
+  HOT_DRY:   { emoji:'☀️', label:'Hot & Dry',  color:'#fb923c' },
+  CLEAR:     { emoji:'🌤️', label:'Clear',       color:'#fde68a' },
+};
+
+const EV_COLOR: Record<string,string> = { drought:'#fb923c', flood:'#38bdf8', heatwave:'#f87171', cyclone:'#a78bfa' };
+
+// ─── Atoms ─────────────────────────────────────────────────────────────
+function Spin() {
+  return <span style={{ display:'inline-block',width:13,height:13,border:'2px solid #ffffff22',borderTop:'2px solid #fff',borderRadius:'50%',animation:'spin 0.7s linear infinite',flexShrink:0 }} />;
+}
+function Badge({ label, color='#0f766e' }: { label:string; color?:string }) {
+  return <span style={{ background:`${color}22`,color,border:`1px solid ${color}55`,borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:700,whiteSpace:'nowrap' }}>{label}</span>;
+}
+function Card({ children, style }: { children:React.ReactNode; style?:React.CSSProperties }) {
+  return <div style={{ background:'#0f172a',border:'1px solid #1e293b',borderRadius:14,padding:'16px 18px',...style }}>{children}</div>;
+}
+function SectionTitle({ children }: { children:React.ReactNode }) {
+  return <h2 style={{ fontSize:12,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:12 }}>{children}</h2>;
+}
+
+// ─── Animated agent bar with expandable deliberation ───────────────────────────
+function AgentCard({ a, delay, hindi }: { a: AgentResult; delay: number; hindi: boolean }) {
+  const [width, setWidth] = useState(0);
+  const [open,  setOpen]  = useState(false);
+  const approve = a.verdict === 'APPROVE';
+  const review  = a.verdict === 'REVIEW';
+  const col = approve ? '#4ade80' : review ? '#fbbf24' : '#f87171';
+  const bg  = approve ? '#052e16' : review ? '#1c1400' : '#2d0a0a';
+  const br  = approve ? '#166534' : review ? '#854d0e' : '#7f1d1d';
+
+  useEffect(() => {
+    const t = setTimeout(() => setWidth(a.confidence), delay);
+    return () => clearTimeout(t);
+  }, [a.confidence, delay]);
 
   return (
     <div
-      style={{ opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(20px)', transition: 'opacity 0.4s ease, transform 0.4s ease',
-        background: isFr ? 'rgba(245,158,11,0.06)' : isOk ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)',
-        border: `1px solid ${dcol}44`, borderRadius: 16, padding: '16px 18px', cursor: 'pointer' }}
-      onClick={onToggle} role="button" tabIndex={0} aria-expanded={open}
-      onKeyDown={e => e.key === 'Enter' && onToggle()}>
-
+      role="button" tabIndex={0} aria-expanded={open}
+      onKeyDown={e => e.key==='Enter' && setOpen(o=>!o)}
+      onClick={() => setOpen(o=>!o)}
+      style={{ background:bg, border:`1px solid ${br}`, borderRadius:12, padding:'14px 16px', cursor:'pointer', transition:'border-color 0.2s', animation:'fadeIn 0.4s ease' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span style={{ fontSize: 26 }}>{icon}</span>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:20 }}>{a.emoji}</span>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: col }}>{a.agent}</div>
-            <div style={{ fontSize: 10, color: '#64748b' }}>{a.role}</div>
-            <div style={{ fontSize: 9, color: '#475569', marginTop: 1 }}>{a.model}</div>
+            <div style={{ fontSize:13, fontWeight:800, color:col }}>{a.agent}</div>
+            <div style={{ fontSize:10, color:'#64748b' }}>{a.role}</div>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ background: `${dcol}22`, border: `1px solid ${dcol}55`, borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 800, color: dcol }}>
-            {a.decision}
-          </div>
-          <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>Weight: {a.weight}</div>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <Badge label={a.verdict} color={col} />
+          <span style={{ fontSize:14, fontWeight:900, color:col }}>{a.confidence}%</span>
+          <span style={{ fontSize:9, color:'#334155' }}>{open?'▲':'▼'}</span>
         </div>
       </div>
-
       {/* Confidence bar */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 10, color: '#64748b' }}>Confidence</span>
-          <span style={{ fontSize: 12, fontWeight: 800, color: dcol }}>{a.confidence}%</span>
-        </div>
-        <AnimBar value={a.confidence} color={dcol} delay={idx * 250} />
+      <div style={{ background:'#1e293b', borderRadius:4, height:8, overflow:'hidden', marginBottom:8 }}>
+        <div style={{ width:`${width}%`, height:8, borderRadius:4,
+          background:`linear-gradient(90deg,${col}66,${col})`,
+          transition:'width 1.2s cubic-bezier(0.4,0,0.2,1)', boxShadow:`0 0 8px ${col}44` }} />
       </div>
-
-      {/* Extra metrics */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: open ? 12 : 0 }}>
-        {a.risk_score !== undefined && (
-          <span style={{ fontSize: 10, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 6, padding: '3px 8px', color: '#94a3b8' }}>
-            Risk Score: <b style={{ color: '#f87171' }}>{a.risk_score}/100</b>
-          </span>
-        )}
-        {a.fraud_score !== undefined && (
-          <span style={{ fontSize: 10, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 6, padding: '3px 8px', color: '#94a3b8' }}>
-            Fraud Score: <b style={{ color: a.fraud_score > 60 ? '#f59e0b' : '#22c55e' }}>{a.fraud_score}/100</b>
-          </span>
-        )}
-        {a.z_scores && Object.entries(a.z_scores).map(([k, v]) => (
-          <span key={k} style={{ fontSize: 10, background: '#0f172a', border: `1px solid ${v.flagged ? '#f59e0b44' : '#1e293b'}`, borderRadius: 6, padding: '3px 8px', color: v.flagged ? '#fbbf24' : '#64748b' }}>
-            {k} z={v.value}σ {v.flagged ? '🚨' : '✅'}
+      {/* Metrics chips */}
+      <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:open?10:0 }}>
+        {Object.entries(a.metrics).slice(0,4).map(([k,v]) => (
+          <span key={k} style={{ fontSize:9, background:'#1e293b', border:'1px solid #334155', borderRadius:4, padding:'2px 6px', color:'#94a3b8', fontFamily:'monospace' }}>
+            {k}: <b style={{ color:'#e2e8f0' }}>{typeof v==='number'?+v.toFixed?.(2):v:v}</b>
           </span>
         ))}
+        <span style={{ fontSize:9, background:'#1e293b', border:'1px solid #334155', borderRadius:4, padding:'2px 6px', color:'#64748b' }}>
+          weight: <b style={{ color:'#e2e8f0' }}>{a.weight}%</b>
+        </span>
+        <span style={{ fontSize:9, background:'#1e293b', border:'1px solid #334155', borderRadius:4, padding:'2px 6px', color:'#64748b' }}>
+          ⏱ {a.latency_ms}ms
+        </span>
       </div>
-
-      {/* Fraud flags */}
-      {a.fraud_flags && a.fraud_flags.length > 0 && (
-        <div style={{ marginBottom: 8 }}>
-          {a.fraud_flags.map((f, i) => (
-            <div key={i} style={{ background: '#431407', border: '1px solid #92400e', borderRadius: 6, padding: '4px 9px', fontSize: 10, color: '#fbbf24', marginBottom: 4 }}>{f}</div>
+      {/* Flags */}
+      {a.flags.length > 0 && (
+        <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginTop:6 }}>
+          {a.flags.map((f,i) => (
+            <span key={i} style={{ fontSize:9, background:approve?'#052e16':review?'#1c1400':'#2d0a0a', border:`1px solid ${br}`, borderRadius:4, padding:'2px 6px', color:col }}>{f}</span>
           ))}
         </div>
       )}
-
-      {/* Expandable deliberation */}
+      {/* Deliberation log */}
       {open && (
-        <div style={{ borderTop: '1px solid #1e293b', paddingTop: 12, marginTop: 4 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', marginBottom: 6, letterSpacing: '0.05em' }}>DELIBERATION LOG</div>
-          {a.reasoning.map((line, i) => (
-            <div key={i} style={{ fontSize: 10, color: '#94a3b8', padding: '3px 0', borderBottom: i < a.reasoning.length - 1 ? '1px dashed #1e293b' : undefined, display: 'flex', gap: 6 }}>
-              <span style={{ color: '#334155', minWidth: 16, fontFamily: 'monospace' }}>{i + 1}.</span>
+        <div style={{ marginTop:12, borderTop:'1px solid #1e293b', paddingTop:12 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:'#475569', marginBottom:6, letterSpacing:'0.05em' }}>
+            {hindi?'मंथन लॉग:':'DELIBERATION LOG'}
+          </div>
+          {a.reasoning.map((line,i) => (
+            <div key={i} style={{ fontSize:10, color:'#94a3b8', padding:'3px 0', borderBottom:i<a.reasoning.length-1?'1px dashed #1e293b':undefined, display:'flex', gap:8 }}>
+              <span style={{ color:'#334155', minWidth:16, flexShrink:0 }}>{i+1}.</span>
               <span>{line}</span>
             </div>
           ))}
-          {/* Checks */}
-          {a.checks && (
-            <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', marginBottom: 5 }}>POLICY CHECKS</div>
-              {Object.entries(a.checks).map(([k, v]) => (
-                <div key={k} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11 }}>{v.pass ? '✅' : '❌'}</span>
-                  <span style={{ fontSize: 10, color: v.pass ? '#86efac' : '#fca5a5' }}><b>{k}:</b> {v.detail}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
-      <div style={{ textAlign: 'right', marginTop: 6, fontSize: 9, color: '#334155' }}>{open ? '▲ collapse' : '▼ expand deliberation'}</div>
     </div>
   );
 }
 
-export default function AgentsPage() {
-  const [form, setForm] = useState({ district: 'Barmer', event_type: 'drought', crop: 'wheat', acreage: '4.5' });
-  const [result, setResult] = useState<OrchestrateResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
-  const [opened,  setOpened]  = useState<Record<number, boolean>>({});
-  const [elapsed, setElapsed] = useState(0);
+// ─── Quorum meter ───────────────────────────────────────────────────────────
+function QuorumMeter({ wc, met, hindi }: { wc: number; met: boolean; hindi: boolean }) {
+  const [w, setW] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setW(wc), 600); return () => clearTimeout(t); }, [wc]);
+  const col = met ? '#4ade80' : wc >= 50 ? '#fbbf24' : '#f87171';
+  return (
+    <Card style={{ background: met ? '#052e16' : wc>=50 ? '#1c1400' : '#2d0a0a', border:`1px solid ${met?'#166534':wc>=50?'#854d0e':'#7f1d1d'}` }}>
+      <SectionTitle>{hindi?'मतदान नतीजा':'QUORUM RESULT'}</SectionTitle>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:10 }}>
+        <div>
+          <div style={{ fontSize:42, fontWeight:900, color:col, lineHeight:1, animation:'celebrate 0.5s ease' }}>{w}%</div>
+          <div style={{ fontSize:11, color:'#64748b', marginTop:2 }}>{hindi?'भारित विश्वास — सीमा: 75%':'Weighted confidence — threshold: 75%'}</div>
+        </div>
+        <div style={{ textAlign:'right' }}>
+          <Badge label={met ? (hindi?'✅ कोरम पूर्ण':'✅ QUORUM MET') : (hindi?'❌ कोरम नहीं':'❌ QUORUM FAILED')} color={col} />
+        </div>
+      </div>
+      {/* Meter bar with 75% threshold marker */}
+      <div style={{ position:'relative', background:'#1e293b', borderRadius:6, height:14, overflow:'visible', marginBottom:10 }}>
+        <div style={{ width:`${w}%`, height:14, borderRadius:6,
+          background:`linear-gradient(90deg,${col}66,${col})`,
+          transition:'width 1.4s cubic-bezier(0.4,0,0.2,1)', boxShadow:`0 0 12px ${col}55` }} />
+        {/* 75% marker */}
+        <div style={{ position:'absolute', left:'75%', top:-4, bottom:-4, width:2, background:'#ffffff44', borderRadius:1 }} />
+        <div style={{ position:'absolute', left:'75%', top:-16, fontSize:8, color:'#94a3b8', transform:'translateX(-50%)' }}>75%</div>
+      </div>
+      {/* Vote tally */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+        {([['APPROVE','#4ade80'] as const, ['REVIEW','#fbbf24'] as const, ['REJECT','#f87171'] as const]).map(([v,c]) => (
+          <div key={v} style={{ background:'#0f172a', border:`1px solid ${c}33`, borderRadius:8, padding:'8px', textAlign:'center' }}>
+            <div style={{ fontSize:20, fontWeight:900, color:c }}>
+              {v==='APPROVE'?w>=75?2:1:v==='REVIEW'?1:0}
+            </div>
+            <div style={{ fontSize:9, color:'#64748b' }}>{v}</div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
-  const runOrchestrate = useCallback(async () => {
-    setLoading(true); setError(''); setResult(null); setOpened({});
-    const start = Date.now();
-    const tick = setInterval(() => setElapsed(Date.now() - start), 80);
+// ─── 6-State FSM Visualiser ────────────────────────────────────────────────────
+function FSMVisualiser({ active, hindi }: { active?: ContractState; hindi: boolean }) {
+  const states: ContractState[] = ['ACTIVE','TRIGGERED','FRAUD_REVIEW','EXECUTED','REJECTED'];
+  const flow = [
+    { from:'ACTIVE',       to:'TRIGGERED',    label: hindi?'कोरम ✅':'quorum ✅',       normal:true  },
+    { from:'ACTIVE',       to:'REJECTED',     label: hindi?'अस्वीकृत':'rejected',         normal:false },
+    { from:'TRIGGERED',    to:'EXECUTED',     label: hindi?'IMPS भुगतान':'IMPS payout',   normal:true  },
+    { from:'TRIGGERED',    to:'FRAUD_REVIEW', label: hindi?'धोखा संकेत':'fraud signal',   normal:false },
+    { from:'FRAUD_REVIEW', to:'EXECUTED',     label: hindi?'समीक्षा ✅':'review ✅',       normal:true  },
+    { from:'FRAUD_REVIEW', to:'REJECTED',     label: hindi?'पुष्टि धोखा':'confirmed fraud',normal:false },
+  ];
+  return (
+    <Card>
+      <SectionTitle>{hindi?'🔗 स्टेट मशीन (6 स्थिति)':'🔗 6-STATE CONTRACT MACHINE'}</SectionTitle>
+      <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:14 }}>
+        {states.map(s => {
+          const m = STATE_META[s];
+          const isActive = s === active;
+          return (
+            <div key={s} style={{ flex:'1 1 80px', minWidth:80,
+              background: isActive ? m.bg : '#0f172a',
+              border: `${isActive?2:1}px solid ${isActive ? m.color : '#1e293b'}`,
+              borderRadius:10, padding:'10px 8px', textAlign:'center',
+              boxShadow: isActive ? `0 0 18px ${m.color}44` : undefined,
+              animation: isActive && s==='FRAUD_REVIEW' ? 'fraudPulse 1.2s ease-in-out infinite' : undefined,
+              transition:'all 0.3s' }}>
+              <div style={{ fontSize:20, marginBottom:3 }}>{m.emoji}</div>
+              <div style={{ fontSize:10, fontWeight:700, color: isActive ? m.color : '#475569' }}>{m.label}</div>
+              {isActive && <div style={{ fontSize:8, color:m.color, marginTop:2 }}>◄ CURRENT</div>}
+            </div>
+          );
+        })}
+      </div>
+      {/* Transition arrows legend */}
+      <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+        {flow.map((f,i) => (
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:10,
+            color: f.from===active||f.to===active ? '#e2e8f0' : '#334155',
+            opacity: f.from===active||f.to===active ? 1 : 0.45, transition:'opacity 0.3s' }}>
+            <span style={{ color: STATE_META[f.from as ContractState]?.color ?? '#64748b', fontWeight:700, minWidth:90 }}>{f.from}</span>
+            <span style={{ color: f.normal ? '#4ade80' : '#f87171' }}>{f.normal?'➡️':'⚠️'}</span>
+            <span style={{ color: STATE_META[f.to as ContractState]?.color ?? '#64748b', fontWeight:700, minWidth:90 }}>{f.to}</span>
+            <span style={{ color:'#475569', fontStyle:'italic' }}>[{f.label}]</span>
+          </div>
+        ))}
+      </div>
+      {active && (
+        <div style={{ marginTop:12, padding:'9px 12px',
+          background: STATE_META[active].bg, border:`1px solid ${STATE_META[active].border}`,
+          borderRadius:8, fontSize:11, color: STATE_META[active].color }}>
+          {STATE_META[active].emoji} <b>{STATE_META[active].label}:</b> {STATE_META[active].desc}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── Oracle snapshot ─────────────────────────────────────────────────────────
+function OracleSnapshot({ snap, hindi }: { snap: OrchestrateResult['oracle_snapshot']; hindi: boolean }) {
+  const items = [
+    { label:hindi?'NDVI (वनस्पति)':'NDVI', value:snap.ndvi.toFixed(3), icon:'🌱', color: snap.ndvi < 0.28 ? '#f87171' : '#4ade80' },
+    { label:hindi?'तापमान °C':'Temp °C',   value:`${snap.temp_c}°`,     icon:'🌡️', color: snap.temp_c > 45 ? '#f87171' : '#fbbf24' },
+    { label:hindi?'वर्षा mm':'Rain mm',    value:`${snap.rain_mm}mm`,   icon:'🌧️', color: snap.rain_mm < 10 ? '#fb923c' : '#38bdf8' },
+    { label:hindi?'मिट्टी %':'Soil %',    value:`${snap.soil}%`,       icon:'🏜️', color: snap.soil < 15 ? '#f87171' : '#a78bfa' },
+  ];
+  return (
+    <Card>
+      <SectionTitle>{hindi?'🛰️ ओरेकल स्नैपशॉट':'🛰️ ORACLE SNAPSHOT'}</SectionTitle>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+        {items.map(it => (
+          <div key={it.label} style={{ background:'#030712', border:'1px solid #1e293b', borderRadius:9, padding:'10px 12px' }}>
+            <div style={{ fontSize:16, marginBottom:3 }}>{it.icon}</div>
+            <div style={{ fontSize:18, fontWeight:900, color:it.color, lineHeight:1 }}>{it.value}</div>
+            <div style={{ fontSize:9, color:'#475569', marginTop:2 }}>{it.label}</div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Weather panel ───────────────────────────────────────────────────────────
+function WeatherPanel({ weather, hindi }: { weather: WeatherResult; hindi: boolean }) {
+  const s = weather.summary;
+  return (
+    <Card>
+      <SectionTitle>{hindi?`🌦️ ${weather.district} मौसम पूर्वानुमान`:`🌦️ ${weather.district} — ${weather.period.days}-day Weather`}</SectionTitle>
+      {/* ENSO badge */}
+      <div style={{ display:'flex', gap:6, marginBottom:12, flexWrap:'wrap' }}>
+        <Badge label={`ENSO: ${weather.enso.phase}`}   color='#a78bfa' />
+        <Badge label={`Rain ×${weather.enso.rain_multiplier}`} color='#38bdf8' />
+        <Badge label={`Temp ${weather.enso.temp_offset > 0 ? '+' : ''}${weather.enso.temp_offset}°C`} color='#fbbf24' />
+        {s.alert_days > 0 && <Badge label={`⚠️ ${s.alert_days} alert days`} color='#f87171' />}
+      </div>
+      {/* Summary grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:7, marginBottom:14 }}>
+        {[
+          ['Max Temp',`${s.max_temp_c}°C`,'#f87171'],
+          ['Total Rain',`${s.total_rainfall_mm}mm`,'#38bdf8'],
+          ['Avg NDVI',`${s.avg_ndvi}`,'#4ade80'],
+          ['Avg Soil',`${s.avg_soil_pct}%`,'#a78bfa'],
+          ['Rain Anomaly',`${s.anomaly_pct > 0 ? '+' : ''}${s.anomaly_pct}%`,s.anomaly_pct > 10 ? '#38bdf8' : s.anomaly_pct < -10 ? '#f87171' : '#fbbf24'],
+          ['Alert Days',`${s.alert_days}`,'#fb923c'],
+        ].map(([k,v,c]) => (
+          <div key={k as string} style={{ background:'#030712', border:'1px solid #1e293b', borderRadius:8, padding:'8px 10px' }}>
+            <div style={{ fontSize:9, color:'#475569', marginBottom:2 }}>{k as string}</div>
+            <div style={{ fontSize:13, fontWeight:800, color:c as string }}>{v as string}</div>
+          </div>
+        ))}
+      </div>
+      {/* Daily strip */}
+      <div style={{ overflowX:'auto', paddingBottom:4 }}>
+        <div style={{ display:'flex', gap:7, minWidth:'max-content' }}>
+          {weather.daily.map(d => {
+            const wm = WC_META[d.imd_weather_code] ?? WC_META.CLEAR;
+            const maxEv = Object.entries(d.event_probabilities).sort((a,b)=>b[1]-a[1])[0];
+            return (
+              <div key={d.date} style={{ background:'#030712', border:'1px solid #1e293b', borderRadius:10, padding:'10px 10px', textAlign:'center', minWidth:80 }}>
+                <div style={{ fontSize:10, color:'#475569', marginBottom:4 }}>{d.date.slice(5)}</div>
+                <div style={{ fontSize:20 }}>{wm.emoji}</div>
+                <div style={{ fontSize:11, fontWeight:700, color:'#f87171', lineHeight:1.2 }}>{d.temp_max}°</div>
+                <div style={{ fontSize:10, color:'#475569' }}>{d.temp_min}°</div>
+                <div style={{ fontSize:10, color:'#38bdf8', marginTop:2 }}>{d.rainfall_mm}mm</div>
+                <div style={{ fontSize:9, marginTop:4 }}>
+                  <span style={{ color: EV_COLOR[maxEv[0]] ?? '#94a3b8', fontWeight:700 }}>
+                    {maxEv[1] > 0.3 ? `⚠️${(maxEv[1]*100).toFixed(0)}%` : '✅'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {/* Event probability bars */}
+      {weather.daily.length > 0 && (
+        <div style={{ marginTop:12 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:'#475569', marginBottom:7, letterSpacing:'0.05em' }}>
+            {hindi?'घटना संभावना (आज):':'EVENT PROBABILITY (TODAY):'}
+          </div>
+          {Object.entries(weather.daily[0].event_probabilities).map(([ev,p]) => (
+            <div key={ev} style={{ marginBottom:6 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, marginBottom:2 }}>
+                <span style={{ color: EV_COLOR[ev] ?? '#94a3b8', fontWeight:700, textTransform:'capitalize' }}>{ev}</span>
+                <span style={{ color: p > 0.6 ? '#f87171' : p > 0.3 ? '#fbbf24' : '#4ade80', fontWeight:700 }}>{(p*100).toFixed(1)}%</span>
+              </div>
+              <div style={{ background:'#1e293b', borderRadius:4, height:5 }}>
+                <div style={{ width:`${p*100}%`, height:5, borderRadius:4, background: EV_COLOR[ev] ?? '#94a3b8', transition:'width 0.8s ease' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── Main page ─────────────────────────────────────────────────────────────
+export default function AgentsPage() {
+  const [loading,  setLoading]  = useState(false);
+  const [result,   setResult]   = useState<OrchestrateResult|null>(null);
+  const [weather,  setWeather]  = useState<WeatherResult|null>(null);
+  const [wLoading, setWLoading] = useState(false);
+  const [error,    setError]    = useState('');
+  const [hindi,    setHindi]    = useState(false);
+
+  const [form, setForm] = useState({
+    district:'Barmer', event_type:'drought', crop:'wheat', acreage:'4.5',
+    policy_id:'SBI-IIE-00341', farmer:'Ramesh Kumar',
+  });
+
+  const runAgents = useCallback(async () => {
+    setLoading(true); setError('');
     try {
       const r = await fetch('/api/agents/orchestrate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, acreage: parseFloat(form.acreage), policy_id: `SBI-IIE-${String(Math.floor(Math.random()*90000+10000))}`}),
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ ...form, acreage: parseFloat(form.acreage) }),
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
+      if (!r.ok) throw new Error(d.error ?? 'API error');
       setResult(d);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error');
-    } finally {
-      clearInterval(tick);
-      setLoading(false);
-    }
+    } catch(e) { setError(e instanceof Error ? e.message : 'Error'); }
+    setLoading(false);
   }, [form]);
 
-  // Run on mount with default params
-  useEffect(() => { runOrchestrate(); }, []); // eslint-disable-line
+  const fetchWeather = useCallback(async () => {
+    setWLoading(true);
+    try {
+      const r = await fetch(`/api/weather/simulate?district=${form.district}&days=7`);
+      setWeather(await r.json());
+    } catch { /* ignore */ }
+    setWLoading(false);
+  }, [form.district]);
 
-  const stateCol = result ? STATE_COLOR[result.orchestrator.contract_state] || '#64748b' : '#64748b';
+  useEffect(() => { runAgents(); fetchWeather(); }, []); // eslint-disable-line
+
+  const inp = (extra?: React.CSSProperties): React.CSSProperties => ({
+    width:'100%', border:'1px solid #1e293b', borderRadius:8, padding:'8px 10px',
+    fontSize:12, background:'#030712', color:'#e2e8f0', fontFamily:'inherit', ...extra,
+  });
 
   return (
-    <div style={{ minHeight: '100vh', background: '#030712', color: '#e2e8f0', fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div style={{ minHeight:'100vh', background:'#030712', fontFamily:"'Inter',system-ui,sans-serif", color:'#e2e8f0' }}>
       <style>{`
-        * { box-sizing: border-box; }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.35} }
-        @keyframes spin   { to{transform:rotate(360deg)} }
-        .fade-up { animation: fadeUp 0.4s ease both; }
-        input,select { font-family: inherit; }
-        input:focus,select:focus { outline: 2px solid #3b82f6; outline-offset: 2px; }
-        @media(max-width:768px) { .agent-grid { grid-template-columns: 1fr !important; } .form-row { grid-template-columns: 1fr 1fr !important; } }
+        @keyframes spin       { to{transform:rotate(360deg)} }
+        @keyframes fadeIn     { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes celebrate  { 0%{transform:scale(1)} 40%{transform:scale(1.08)} 100%{transform:scale(1)} }
+        @keyframes fraudPulse { 0%,100%{box-shadow:0 0 12px #f9731644} 50%{box-shadow:0 0 32px #f97316cc} }
+        @keyframes shimmer    { 0%{background-position:-200%} 100%{background-position:200%} }
+        *  { box-sizing:border-box }
+        button,a { cursor:pointer }
+        input,select { outline:none; font-family:inherit }
+        input:focus,select:focus { border-color:#34d399!important; box-shadow:0 0 0 3px #34d39922 }
+        ::-webkit-scrollbar { width:4px; height:4px }
+        ::-webkit-scrollbar-track { background:#0f172a }
+        ::-webkit-scrollbar-thumb { background:#334155; border-radius:2px }
+        @media(max-width:768px) { .two-col{grid-template-columns:1fr!important} }
       `}</style>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 16px 48px' }}>
-
-        {/* Header */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>Multi-Agent Orchestrator</div>
-          <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0 }}>🤖 AI Agent <span style={{ background: 'linear-gradient(90deg,#3b82f6,#10b981,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Quorum</span></h1>
-          <p style={{ color: '#64748b', marginTop: 8, fontSize: 13 }}>Three specialist agents vote with weighted confidence. Orchestrator aggregates into a binding decision.</p>
+      {/* ── Topbar ── */}
+      <div style={{ background:'#0d1117', borderBottom:'1px solid #1e293b', padding:'12px 20px',
+        display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8,
+        position:'sticky', top:0, zIndex:50 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <a href="/" style={{ color:'#475569', textDecoration:'none', fontSize:12 }}>← Home</a>
+          <span style={{ color:'#1e293b' }}>|</span>
+          <span style={{ fontSize:14, fontWeight:800, color:'#e2e8f0' }}>🤖 {hindi?'मल्टी-एजेंट ऑर्केस्ट्रेटर':'Multi-Agent Orchestrator'}</span>
         </div>
-
-        {/* Controls */}
-        <div style={{ background: '#0d1117', border: '1px solid #1e293b', borderRadius: 16, padding: '20px 24px', marginBottom: 24 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }} className="form-row">
-            {([ ['district','District',DISTRICTS], ['event_type','Event',EVENTS], ['crop','Crop',CROPS] ] as [keyof typeof form, string, string[]][]).map(([k,l,opts]) => (
-              <div key={k}>
-                <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase' }}>{l}</div>
-                <select value={form[k]} onChange={e => setForm(f => ({...f,[k]:e.target.value}))}
-                  style={{ width: '100%', background: '#030712', border: '1px solid #1e293b', borderRadius: 8, padding: '8px 10px', color: '#e2e8f0', fontSize: 12 }}>
-                  {opts.map(o => <option key={o}>{o}</option>)}
-                </select>
-              </div>
-            ))}
-            <div>
-              <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, marginBottom: 3, textTransform: 'uppercase' }}>Acreage</div>
-              <input type="number" value={form.acreage} onChange={e => setForm(f => ({...f,acreage:e.target.value}))}
-                style={{ width: '100%', background: '#030712', border: '1px solid #1e293b', borderRadius: 8, padding: '8px 10px', color: '#e2e8f0', fontSize: 12 }} />
-            </div>
-          </div>
-          <button onClick={runOrchestrate} disabled={loading}
-            style={{ background: loading ? '#1e293b' : 'linear-gradient(135deg,#1d4ed8,#7c3aed)', color: loading ? '#475569' : '#fff',
-              border: 'none', borderRadius: 10, padding: '10px 24px', fontSize: 13, fontWeight: 700, cursor: loading ? 'default' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: 8 }}>
-            {loading ? (
-              <><span style={{ width:14,height:14,border:'2px solid #ffffff33',borderTop:'2px solid #fff',borderRadius:'50%',animation:'spin 0.7s linear infinite',display:'inline-block' }} /> Running agents… ({(elapsed/1000).toFixed(1)}s)</>
-            ) : '🚀 Run Orchestrator'}
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <a href="/demo"   style={{ fontSize:11, color:'#4ade80',  textDecoration:'none', fontWeight:600 }}>Demo</a>
+          <a href="/dashboard" style={{ fontSize:11, color:'#38bdf8', textDecoration:'none', fontWeight:600 }}>Dashboard</a>
+          <button onClick={()=>setHindi(h=>!h)}
+            style={{ background:hindi?'#065f46':'#1e293b', color:hindi?'#d1fae5':'#94a3b8',
+              border:'1px solid #334155', borderRadius:7, padding:'5px 9px', fontSize:11, fontWeight:700 }}>
+            {hindi?'EN':'हि'}
           </button>
         </div>
+      </div>
 
-        {error && <div style={{ background:'#2d0a0a',border:'1px solid #7f1d1d',borderRadius:10,padding:'10px 14px',color:'#fca5a5',marginBottom:16,fontSize:12 }}>⚠️ {error}</div>}
+      <div style={{ maxWidth:1200, margin:'0 auto', padding:'20px 14px' }}>
+        {/* ── Hero ── */}
+        <div style={{ marginBottom:20, animation:'fadeIn 0.4s ease' }}>
+          <h1 style={{ fontSize:22, fontWeight:900, color:'#f1f5f9', marginBottom:4 }}>
+            {hindi?'🤖 AI एजेंट कोरम — लाइव वोटिंग':'🤖 AI Agent Quorum — Live Voting'}
+          </h1>
+          <p style={{ color:'#64748b', fontSize:12 }}>
+            {hindi?'3 विशेषज्ञ एजेंट स्वतंत्र रूप से विश्लेषण करते हैं · भारित बहुमत · FRAUD_REVIEW स्थिति · हाइपरलेजर तैयार'
+            :'3 specialist agents analyse independently · Weighted quorum voting · FRAUD_REVIEW FSM state · Hyperledger-ready'}
+          </p>
+        </div>
 
+        {error && (
+          <div style={{ background:'#2d0a0a', border:'1px solid #7f1d1d', borderRadius:10,
+            padding:'10px 14px', color:'#fca5a5', marginBottom:14, fontSize:12 }} role="alert">
+            ⚠️ {error}
+          </div>
+        )}
+
+        {/* ── Top row: controls + oracle + quorum ── */}
+        <div style={{ display:'grid', gridTemplateColumns:'320px 1fr', gap:16, marginBottom:16, alignItems:'start' }} className="two-col">
+          {/* Controls */}
+          <Card>
+            <SectionTitle>{hindi?'⚙️ इनपुट पैरामीटर':'⚙️ INPUT PARAMETERS'}</SectionTitle>
+            {[
+              { k:'district',   label:hindi?'जिला':'District',   type:'select', opts:DISTRICTS },
+              { k:'event_type', label:hindi?'घटना':'Event',      type:'select', opts:EVENTS    },
+              { k:'crop',       label:hindi?'फसल':'Crop',        type:'select', opts:CROPS     },
+              { k:'acreage',    label:hindi?'एकड़':'Acreage',    type:'number', opts:null      },
+              { k:'farmer',     label:hindi?'किसान':'Farmer',    type:'text',   opts:null      },
+            ].map(({ k, label, type, opts }) => (
+              <div key={k} style={{ marginBottom:10 }}>
+                <div style={{ fontSize:9, color:'#475569', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:3 }}>{label}</div>
+                {opts ? (
+                  <select value={form[k as keyof typeof form]} onChange={e => setForm(f=>({...f,[k]:e.target.value}))} style={inp()}>
+                    {opts.map(o => <option key={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input type={type} value={form[k as keyof typeof form]} onChange={e => setForm(f=>({...f,[k]:e.target.value}))} style={inp()} />
+                )}
+              </div>
+            ))}
+            <button onClick={()=>{ runAgents(); fetchWeather(); }} disabled={loading}
+              style={{ width:'100%', background:loading?'#1e293b':'linear-gradient(135deg,#065f46,#047857)',
+                color:loading?'#475569':'#d1fae5', border:'none', borderRadius:10,
+                padding:'11px', fontSize:13, fontWeight:700, display:'flex', alignItems:'center',
+                justifyContent:'center', gap:8, marginTop:4 }}>
+              {loading && <Spin />}
+              {loading ? (hindi?'चल रहा है…':'Running…') : (hindi?'▶️ एजेंट चलाएं':'▶️ Run Agent Quorum')}
+            </button>
+            {/* Quick presets */}
+            <div style={{ marginTop:10 }}>
+              <div style={{ fontSize:9, color:'#475569', fontWeight:700, letterSpacing:'0.05em', marginBottom:6 }}>QUICK PRESETS</div>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {[
+                  { label:'🌵 Barmer Drought', d:'Barmer', e:'drought', c:'wheat' },
+                  { label:'🌊 Puri Flood',     d:'Puri',   e:'flood',   c:'paddy' },
+                  { label:'🔥 Jodhpur Heat',   d:'Jodhpur',e:'heatwave',c:'cotton' },
+                ].map(p => (
+                  <button key={p.label} onClick={()=>{ setForm(f=>({...f,district:p.d,event_type:p.e,crop:p.c})); }}
+                    style={{ fontSize:10, background:'#1e293b', color:'#94a3b8', border:'1px solid #334155',
+                      borderRadius:7, padding:'4px 9px', fontFamily:'inherit' }}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* Oracle + Quorum */}
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            {result && <OracleSnapshot snap={result.oracle_snapshot} hindi={hindi} />}
+            {result && <QuorumMeter wc={result.quorum.weighted_confidence} met={result.quorum.met} hindi={hindi} />}
+            {!result && loading && (
+              <Card style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:160 }}>
+                <Spin /><span style={{ marginLeft:10, color:'#64748b' }}>{hindi?'एजेंट विश्लेषण कर रहे हैं…':'Agents deliberating…'}</span>
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* ── Agent cards ── */}
         {result && (
-          <div className="fade-up">
-
-            {/* Orchestrator verdict */}
-            <div style={{ background: `${stateCol}11`, border: `2px solid ${stateCol}44`, borderRadius: 18, padding: '20px 24px', marginBottom: 24 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Orchestrator Verdict</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 30, fontWeight: 900, color: stateCol }}>{result.orchestrator.contract_state}</span>
-                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: stateCol, display: 'inline-block', animation: 'pulse 1.2s infinite' }} />
-                  </div>
-                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6, maxWidth: 480 }}>{result.orchestrator.decision_rationale}</div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 28, fontWeight: 900, color: stateCol }}>{result.orchestrator.quorum_confidence}%</div>
-                    <div style={{ fontSize: 10, color: '#64748b' }}>Weighted Confidence</div>
-                  </div>
-                  <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 28, fontWeight: 900, color: '#e2e8f0' }}>{result.orchestrator.approve_count}/{result.orchestrator.total_agents}</div>
-                    <div style={{ fontSize: 10, color: '#64748b' }}>Agents Approved</div>
-                  </div>
-                </div>
-              </div>
-              {/* Quorum bar */}
-              <div style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#475569', marginBottom: 4 }}>
-                  <span>Quorum threshold: 65%</span>
-                  <span>{result.orchestrator.quorum_met ? '✅ Met' : '❌ Not met'}</span>
-                </div>
-                <div style={{ background: '#1e293b', borderRadius: 8, height: 12, overflow: 'hidden', position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: '65%', top: 0, bottom: 0, width: 2, background: '#475569', zIndex: 1 }} />
-                  <div style={{ width: `${result.orchestrator.quorum_confidence}%`, background: `linear-gradient(90deg,${stateCol}88,${stateCol})`, height: 12, borderRadius: 8, transition: 'width 1.5s ease', boxShadow: `0 0 12px ${stateCol}66` }} />
-                </div>
-              </div>
-            </div>
-
-            {/* Agent cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }} className="agent-grid">
-              {result.agents.map((a, i) => (
-                <AgentCard key={a.agent} a={a} idx={i} open={!!opened[i]} onToggle={() => setOpened(o => ({...o,[i]:!o[i]}))} />
-              ))}
-            </div>
-
-            {/* Weight breakdown */}
-            <div style={{ background: '#0d1117', border: '1px solid #1e293b', borderRadius: 16, padding: '18px 22px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 14, color: '#94a3b8' }}>⚖️ Weight Breakdown</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }} className="agent-grid">
-                {result.agents.map(a => {
-                  const col = AGENT_COLOR[a.agent] || '#64ffda';
-                  const dcol = DEC_COLOR[a.decision] || '#94a3b8';
-                  const contribution = Math.round(parseFloat(a.weight) * a.confidence / 100);
-                  return (
-                    <div key={a.agent} style={{ background: '#030712', border: '1px solid #1e293b', borderRadius: 10, padding: '12px 14px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: col }}>{AGENT_ICON[a.agent]} {a.agent}</span>
-                        <span style={{ fontSize: 10, color: '#475569' }}>×{a.weight}</span>
-                      </div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: dcol }}>{a.confidence}% × {a.weight}</div>
-                      <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>= ~{contribution}pts weighted</div>
-                      <AnimBar value={parseFloat(a.weight) * a.confidence} color={dcol} delay={200} />
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ marginTop: 12, fontSize: 11, color: '#475569', fontFamily: 'monospace', background: '#030712', padding: '8px 12px', borderRadius: 8 }}>
-                {result.orchestrator.quorum_rule}
-              </div>
-            </div>
-
-            {/* Action CTAs */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
-              <a href="/demo" style={{ background: 'linear-gradient(135deg,#065f46,#047857)', color: '#d1fae5', textDecoration: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 12, fontWeight: 700 }}>⚡ Full Demo →</a>
-              <a href="/dashboard" style={{ background: 'linear-gradient(135deg,#1e3a8a,#1d4ed8)', color: '#dbeafe', textDecoration: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 12, fontWeight: 700 }}>📊 Dashboard →</a>
-              <a href="/blockchain" style={{ background: 'linear-gradient(135deg,#4c1d95,#6d28d9)', color: '#ede9fe', textDecoration: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 12, fontWeight: 700 }}>🔗 Blockchain →</a>
+          <div style={{ marginBottom:16 }}>
+            <h2 style={{ fontSize:13, fontWeight:700, color:'#e2e8f0', marginBottom:12 }}>
+              {hindi?'🤖 एजेंट विचार-विमर्श (क्लिक करके लॉग देखें)':'🤖 Agent Deliberations — click any card to expand reasoning log'}
+            </h2>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }} className="two-col">
+              {result.agents.map((a,i) => <AgentCard key={a.agent} a={a} delay={i*400} hindi={hindi} />)}
             </div>
           </div>
         )}
+
+        {/* ── Bottom row: FSM + Weather ── */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }} className="two-col">
+          <FSMVisualiser active={result?.contract_state as ContractState} hindi={hindi} />
+          {weather
+            ? <WeatherPanel weather={weather} hindi={hindi} />
+            : <Card style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:200 }}>
+                {wLoading ? <><Spin/><span style={{ marginLeft:8, color:'#64748b', fontSize:12 }}>{hindi?'मौसम लोड हो रहा है…':'Loading weather…'}</span></> : null}
+              </Card>
+          }
+        </div>
+
+        {/* ── Blockchain note ── */}
+        {result && (
+          <Card style={{ background:'#0d0d1a', border:'1px solid #1e3a8a', animation:'fadeIn 0.4s ease' }}>
+            <SectionTitle>{hindi?'⛓️ ब्लॉकचेन + हाइपरलेजर':'⛓️ BLOCKCHAIN + HYPERLEDGER FABRIC'}</SectionTitle>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }} className="two-col">
+              {[
+                ['Network',   'Polygon Mumbai Testnet', '#a78bfa'],
+                ['FSM States','ACTIVE › TRIGGERED › FRAUD_REVIEW › EXECUTED | REJECTED', '#38bdf8'],
+                ['Hyperledger','Fabric v2.4 · iie-claims-channel · 3/3 endorsers', '#4ade80'],
+              ].map(([k,v,c]) => (
+                <div key={k as string} style={{ background:'#030712', border:'1px solid #1e293b', borderRadius:9, padding:'10px 12px' }}>
+                  <div style={{ fontSize:9, color:'#475569', marginBottom:3, fontWeight:700, textTransform:'uppercase' }}>{k}</div>
+                  <div style={{ fontSize:11, color:c as string, fontFamily:'monospace', lineHeight:1.5 }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop:10, padding:'8px 12px', background:'#1e293b', borderRadius:8, fontSize:10, color:'#64748b' }}>
+              <b style={{ color:'#94a3b8' }}>Transition:</b> {result.blockchain.previous_state} → <b style={{ color: STATE_META[result.contract_state as ContractState]?.color ?? '#e2e8f0' }}>{result.blockchain.new_state}</b>
+              {' '}<Badge label={result.blockchain.valid ? '✓ Valid' : '⚠ Invalid'} color={result.blockchain.valid ? '#4ade80' : '#f87171'} />
+              <span style={{ marginLeft:10, color:'#334155' }}>{result.blockchain.note}</span>
+            </div>
+          </Card>
+        )}
+
+        {/* ── Nav ── */}
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop:20, justifyContent:'center' }}>
+          {[
+            ['/demo',      '⚡ Full Demo',  '#065f46'],
+            ['/dashboard', '🗺️ Dashboard',  '#0c4a6e'],
+            ['/impact',    '📊 Impact',     '#4c1d95'],
+          ].map(([href,label,bg]) => (
+            <a key={href as string} href={href as string} style={{ background:`linear-gradient(135deg,${bg},${bg}dd)`, color:'#e2e8f0',
+              textDecoration:'none', borderRadius:10, padding:'10px 20px', fontSize:12, fontWeight:700 }}>
+              {label as string}
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   );
