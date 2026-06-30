@@ -3,221 +3,170 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
 const STATS = [
-  { value: '₹1.22L', label: 'Max Coverage',   sub: 'Full Season Pro plan' },
-  { value: '4',      label: 'Oracle Sources',  sub: 'NASA · IMD · ISRO · ICAR' },
-  { value: '≥75%',   label: 'AI Quorum',       sub: '4-agent weighted vote' },
-  { value: '<3s',    label: 'Payout Speed',    sub: 'IMPS settlement' },
+  { value: '₹1.22L', label: 'Max Coverage',  sub: 'Full Season Pro' },
+  { value: '4',      label: 'Oracle Sources', sub: 'NASA · IMD · ISRO · ICAR' },
+  { value: '≥75%',   label: 'AI Quorum',      sub: '4-agent weighted vote' },
+  { value: '<3s',    label: 'Payout Speed',   sub: 'IMPS settlement' },
 ];
 
 const LINKS = [
-  { href:'/demo',         emoji:'⚡', label:'Live Demo',      sub:'5-step engine walkthrough',        color:'#0f766e' },
-  { href:'/enroll',       emoji:'📋', label:'Enroll Farmer',  sub:'Policy + contract deploy',         color:'#1d4ed8' },
-  { href:'/risk',         emoji:'🛰️', label:'Oracle Feed',    sub:'Live multi-district risk data',    color:'#7c3aed' },
-  { href:'/payouts',      emoji:'💸', label:'Payout Tracker', sub:'IMPS credits + UPI references',    color:'#b45309' },
-  { href:'/blockchain',   emoji:'🔗', label:'Audit Chain',    sub:'SHA-256 tamper-evident ledger',    color:'#0369a1' },
-  { href:'/architecture', emoji:'🏗️', label:'Architecture',   sub:'System design overview',          color:'#059669' },
-  { href:'/india-stack',  emoji:'🇮🇳', label:'India Stack',   sub:'DigiLocker · UPI · Aadhaar',      color:'#dc2626' },
-  { href:'/impact',       emoji:'📊', label:'GFF Impact',     sub:'Claims 6mo→3s · Fraud −91%',      color:'#d97706' },
+  { href:'/demo',         emoji:'⚡', label:'Live Demo',      sub:'5-step engine walkthrough',       color:'#64ffda' },
+  { href:'/enroll',       emoji:'📋', label:'Enroll Farmer',  sub:'Policy + contract deploy',        color:'#82b1ff' },
+  { href:'/risk',         emoji:'🛰️', label:'Oracle Feed',    sub:'Live multi-district risk data',   color:'#e040fb' },
+  { href:'/payouts',      emoji:'💸', label:'Payout Tracker', sub:'IMPS credits + UPI references',   color:'#f9d423' },
+  { href:'/blockchain',   emoji:'🔗', label:'Audit Chain',    sub:'SHA-256 tamper-evident ledger',   color:'#64ffda' },
+  { href:'/architecture', emoji:'🏗️', label:'Architecture',   sub:'System design overview',         color:'#3fb950' },
+  { href:'/india-stack',  emoji:'🇮🇳', label:'India Stack',   sub:'DigiLocker · UPI · Aadhaar',     color:'#f85149' },
+  { href:'/impact',       emoji:'📊', label:'GFF Impact',     sub:'Claims 6mo→3s · Fraud −91%',     color:'#e3b341' },
 ];
 
 const PIPELINE = [
-  { icon:'📋', step:'KYC + Enroll',   detail:'DigiLocker · Aadhaar · PM-FASAL' },
+  { icon:'📋', step:'KYC + Enroll',   detail:'Aadhaar · DigiLocker · PM-FASAL' },
   { icon:'🛰️', step:'Oracle Fetch',   detail:'NASA · IMD · ISRO · ICAR' },
   { icon:'🤖', step:'AI Quorum',      detail:'4 agents · ≥75% triggers' },
   { icon:'⚡', step:'Smart Contract', detail:'ACTIVE→TRIGGERED→EXECUTED' },
   { icon:'💸', step:'IMPS Payout',    detail:'UPI ref · RRN · SMS <3s' },
 ];
 
-const IMPACT_TICKERS = [
-  { label:'Claim time',     before:'6 months', after:'<3 seconds',  delta:'99.998% faster' },
-  { label:'Forms filed',   before:'12 forms',  after:'0 forms',     delta:'100% eliminated' },
-  { label:'Fraud rate',    before:'23%',       after:'<2%',         delta:'−91%' },
-  { label:'Admin cost',    before:'₹4,800',    after:'₹38',         delta:'−99.2%' },
-  { label:'Farmers reach', before:'4.2 Cr',    after:'14 Cr+',      delta:'3.3× scale' },
+const IMPACT = [
+  { label:'Claim time',    before:'6 months', after:'<3 seconds', delta:'99.998% faster' },
+  { label:'Forms filed',   before:'12 forms',  after:'0 forms',    delta:'100% gone' },
+  { label:'Fraud rate',    before:'23%',       after:'<2%',        delta:'-91%' },
+  { label:'Admin cost',    before:'₹4,800',    after:'₹38',        delta:'-99.2%' },
+  { label:'Farmers reach', before:'4.2 Cr',    after:'14 Cr+',     delta:'3.3× scale' },
 ];
 
 export default function HomePage() {
-  const [tick, setTick]       = useState(0);
-  const [visible, setVisible] = useState(false);
-  const [itick, setItick]     = useState(0);
-  const [liveAmt, setLiveAmt] = useState(0);
+  const [tick,  setTick]  = useState(0);
+  const [itick, setItick] = useState(0);
+  const [amt,   setAmt]   = useState(83472000);
 
   useEffect(() => {
-    setVisible(true);
-    const t1 = setInterval(() => setTick(x => x + 1), 2000);
-    const t2 = setInterval(() => setItick(x => x + 1), 3500);
-    // Simulate live ₹ protected counter ticking up
-    let base = 8347200;
-    const t3 = setInterval(() => {
-      base += Math.floor(Math.random() * 70000 + 30000);
-      setLiveAmt(base);
-    }, 1800);
-    setLiveAmt(base);
+    const t1 = setInterval(() => setTick(x => x + 1), 2200);
+    const t2 = setInterval(() => setItick(x => x + 1), 3400);
+    const t3 = setInterval(() => setAmt(a => a + Math.floor(Math.random() * 70000 + 30000)), 1800);
     return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3); };
   }, []);
 
-  const activePipe  = tick  % PIPELINE.length;
-  const activeImpact = itick % IMPACT_TICKERS.length;
-  const imp = IMPACT_TICKERS[activeImpact];
-
-  const fmt = (n: number) => {
-    if (n >= 1e7) return '₹' + (n/1e7).toFixed(2) + ' Cr';
-    if (n >= 1e5) return '₹' + (n/1e5).toFixed(1) + ' L';
-    return '₹' + n.toLocaleString('en-IN');
-  };
+  const ap = tick  % PIPELINE.length;
+  const im = IMPACT[itick % IMPACT.length];
+  const fmt = (n: number) => n >= 1e7 ? '₹' + (n / 1e7).toFixed(2) + ' Cr' : '₹' + (n / 1e5).toFixed(1) + ' L';
 
   return (
-    <main style={{
-      minHeight:'100vh',
-      background:'linear-gradient(160deg,#020d0c 0%,#042f2e 40%,#0f766e 80%,#059669 100%)',
-      fontFamily:"'Inter',system-ui,sans-serif", color:'#fff', overflowX:'hidden',
-    }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
       <style>{`
-        @keyframes fadeUp  { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.5} }
         @keyframes shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
-        @keyframes float   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-        @keyframes flipIn  { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
-        .fade-up   { animation:fadeUp 0.6s ease both }
-        .card-hover:hover { transform:translateY(-4px) scale(1.02); box-shadow:0 12px 40px #00000055 !important }
-        .card-hover { transition:all 0.22s ease }
-        .flip-in   { animation:flipIn 0.4s ease both }
-        * { box-sizing:border-box }
+        @keyframes flip { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        .shimmer-text { background-size:200% auto; animation:shimmer 4s linear infinite; }
+        .flip-in { animation:flip 0.4s ease both; }
+        .floaty  { animation:floaty 3s ease-in-out infinite; }
+        .navcard:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,0.6) !important; }
+        .navcard { transition:all 0.2s ease; }
       `}</style>
 
       {/* Hero */}
-      <div style={{ maxWidth:1100, margin:'0 auto', padding:'56px 20px 32px', textAlign:'center',
-        opacity:visible?1:0, transition:'opacity 0.8s ease' }}>
-        <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
-          <span style={{ background:'#ffffff15', border:'1px solid #6ee7b766', borderRadius:999, padding:'6px 18px',
-            fontSize:13, fontWeight:600, color:'#6ee7b7', display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ width:8, height:8, borderRadius:'50%', background:'#4ade80', display:'inline-block', animation:'pulse 1.5s infinite' }} />
-            LIVE · SBI Global Fintech Fest 2026 · All engines running on Vercel Edge
-          </span>
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-6 text-xs font-bold" style={{ background:'rgba(63,185,80,0.12)', border:'1px solid rgba(63,185,80,0.3)', color:'#3fb950' }}>
+          <span className="pulse-dot" />
+          LIVE · SBI Global Fintech Fest 2026 · All systems running on Vercel Edge
         </div>
-        <div style={{ fontSize:64, marginBottom:12, animation:'float 3s ease-in-out infinite' }}>🌾</div>
-        <h1 style={{ fontWeight:900, fontSize:'clamp(32px,6vw,58px)', letterSpacing:'-0.03em',
-          margin:'0 0 14px', background:'linear-gradient(90deg,#ffffff,#6ee7b7,#34d399)',
-          backgroundSize:'200% auto', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-          animation:'shimmer 4s linear infinite' }}>YONO-Oracle IIE</h1>
-        <p style={{ fontSize:'clamp(15px,2.2vw,20px)', color:'#a7f3d0', maxWidth:620, margin:'0 auto 10px', lineHeight:1.6 }}>
-          India&apos;s first <b style={{ color:'#fff' }}>fully autonomous parametric crop insurance engine</b> —
+        <div className="text-6xl mb-4 floaty">🌾</div>
+        <h1 className="text-5xl sm:text-6xl font-black mb-4 shimmer-text" style={{
+          background: 'linear-gradient(90deg,#ffffff,#64ffda,#82b1ff)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+        }}>YONO-Oracle IIE</h1>
+        <p className="text-white/60 text-lg max-w-2xl mx-auto mb-2">
+          India’s first <span className="text-white font-bold">fully autonomous parametric crop insurance engine</span> —
           oracle-verified, AI-quorum-governed, blockchain-audited, IMPS-settled.
         </p>
-        <p style={{ fontSize:13, color:'#6ee7b7', marginBottom:32 }}>Powered by NASA · IMD · ISRO · ICAR · PM-FASAL · DigiLocker · UPI · Aadhaar</p>
-        <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
-          <Link href="/demo" style={{ background:'linear-gradient(135deg,#0f766e,#059669)', color:'#fff',
-            borderRadius:14, padding:'14px 34px', fontWeight:800, fontSize:16, textDecoration:'none',
-            boxShadow:'0 4px 28px #0f766e88', display:'flex', alignItems:'center', gap:10 }}>⚡ Start Live Demo →</Link>
-          <Link href="/impact" style={{ background:'#d97706', color:'#fff', borderRadius:14,
-            padding:'14px 24px', fontWeight:700, fontSize:15, textDecoration:'none',
-            boxShadow:'0 4px 16px #d9770644' }}>📊 Impact Metrics</Link>
-          <Link href="/architecture" style={{ background:'#ffffff18', border:'1px solid #ffffff44',
-            color:'#fff', borderRadius:14, padding:'14px 24px', fontWeight:700, fontSize:15, textDecoration:'none' }}>🏗️ Architecture</Link>
+        <p className="text-[#64ffda] text-sm mb-8">NASA · IMD · ISRO · ICAR · PM-FASAL · DigiLocker · UPI · Aadhaar</p>
+        <div className="flex gap-3 justify-center flex-wrap">
+          <Link href="/demo" className="px-8 py-3.5 rounded-xl font-bold text-[#030712] text-sm" style={{ background:'linear-gradient(135deg,#64ffda,#3fb950)', boxShadow:'0 4px 24px rgba(100,255,218,0.35)' }}>⚡ Start Live Demo →</Link>
+          <Link href="/impact" className="px-6 py-3.5 rounded-xl font-bold text-sm" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.15)', color:'#e6edf3' }}>📊 Impact Metrics</Link>
+          <Link href="/architecture" className="px-6 py-3.5 rounded-xl font-bold text-sm" style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.15)', color:'#e6edf3' }}>🏗️ Architecture</Link>
         </div>
       </div>
 
-      {/* Live Stats Bar */}
-      <div style={{ maxWidth:1100, margin:'0 auto 36px', padding:'0 20px' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12,
-          background:'#ffffff0e', border:'1px solid #ffffff22', borderRadius:20, padding:'22px 18px' }}>
-          {STATS.map((s,i) => (
-            <div key={i} style={{ textAlign:'center' }}>
-              <div style={{ fontSize:'clamp(20px,3.5vw,30px)', fontWeight:900, color:'#6ee7b7' }}>{s.value}</div>
-              <div style={{ fontSize:13, fontWeight:700, color:'#fff', marginTop:4 }}>{s.label}</div>
-              <div style={{ fontSize:11, color:'#a7f3d0', marginTop:2 }}>{s.sub}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Live Impact Ticker */}
-      <div style={{ maxWidth:1100, margin:'0 auto 44px', padding:'0 20px' }}>
-        <div style={{ background:'linear-gradient(135deg,#1a237e22,#0f766e33)', border:'1px solid #6ee7b733',
-          borderRadius:18, padding:'20px 28px', display:'flex', alignItems:'center', justifyContent:'space-between',
-          flexWrap:'wrap', gap:16 }}>
-          <div>
-            <div style={{ fontSize:11, fontWeight:700, color:'#6ee7b7', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:6 }}>📈 Live Impact vs PMFBY</div>
-            <div key={activeImpact} className="flip-in" style={{ fontSize:15, color:'#e2e8f0' }}>
-              <b style={{ color:'#fff' }}>{imp.label}:</b>&nbsp;
-              <span style={{ color:'#f87171', textDecoration:'line-through' }}>{imp.before}</span>
-              &nbsp;→&nbsp;
-              <span style={{ color:'#4ade80', fontWeight:700 }}>{imp.after}</span>
-              &nbsp;<span style={{ background:'#4ade8022', border:'1px solid #4ade8044', borderRadius:6,
-                padding:'2px 8px', fontSize:12, color:'#4ade80', fontWeight:700 }}>▲ {imp.delta}</span>
-            </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+        {STATS.map((s,i) => (
+          <div key={i} className="glass text-center py-5 px-3">
+            <div className="text-3xl font-black text-[#64ffda]">{s.value}</div>
+            <div className="text-sm font-bold text-[#e6edf3] mt-1">{s.label}</div>
+            <div className="text-[10px] text-[#7d8590] mt-0.5">{s.sub}</div>
           </div>
-          <div style={{ textAlign:'right' }}>
-            <div style={{ fontSize:11, color:'#6ee7b7', marginBottom:4 }}>🌾 LIVE · Total Coverage Active</div>
-            <div style={{ fontSize:26, fontWeight:900, color:'#fff', fontVariantNumeric:'tabular-nums' }}>{fmt(liveAmt)}</div>
-            <div style={{ fontSize:11, color:'#a7f3d0' }}>updated every ~2s · demo simulation</div>
+        ))}
+      </div>
+
+      {/* Live impact ticker */}
+      <div className="rounded-2xl p-5 mb-8 flex items-center justify-between flex-wrap gap-4" style={{ background:'linear-gradient(135deg,rgba(100,255,218,0.06),rgba(130,177,255,0.06))', border:'1px solid rgba(100,255,218,0.15)' }}>
+        <div>
+          <div className="text-[10px] font-bold text-[#64ffda] tracking-widest uppercase mb-2">📈 Live Impact vs PMFBY</div>
+          <div key={itick} className="flip-in text-sm">
+            <span className="text-white font-bold">{im.label}:</span>&nbsp;
+            <span style={{ color:'#f85149', textDecoration:'line-through' }}>{im.before}</span>
+            &nbsp;→&nbsp;
+            <span style={{ color:'#3fb950', fontWeight:700 }}>{im.after}</span>&nbsp;
+            <span style={{ background:'rgba(63,185,80,0.15)', border:'1px solid rgba(63,185,80,0.35)', borderRadius:6, padding:'2px 8px', fontSize:11, color:'#3fb950', fontWeight:700 }}>▲ {im.delta}</span>
           </div>
         </div>
+        <div className="text-right">
+          <div className="text-[10px] text-[#64ffda] mb-1">🌾 LIVE · Total Coverage Active</div>
+          <div className="text-3xl font-black text-[#e6edf3] font-mono">{fmt(amt)}</div>
+          <div className="text-[10px] text-[#7d8590]">demo simulation · updates every ~2s</div>
+        </div>
       </div>
 
-      {/* Live Pipeline */}
-      <div style={{ maxWidth:1100, margin:'0 auto 48px', padding:'0 20px' }}>
-        <h2 style={{ textAlign:'center', fontWeight:800, fontSize:20, marginBottom:22, color:'#e2e8f0' }}>🔄 Autonomous Pipeline — Live</h2>
-        <div style={{ display:'flex', alignItems:'center', gap:0, overflowX:'auto', paddingBottom:8 }}>
-          {PIPELINE.map((p,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', flex:1, minWidth:150 }}>
-              <div style={{ flex:1, background:i===activePipe?'#0f766e':'#ffffff12',
-                border:`2px solid ${i===activePipe?'#6ee7b7':'#ffffff22'}`, borderRadius:16,
-                padding:'14px 10px', textAlign:'center', transition:'all 0.5s ease',
-                boxShadow:i===activePipe?'0 0 24px #0f766e88':'none' }}>
-                <div style={{ fontSize:26, marginBottom:5 }}>{p.icon}</div>
-                <div style={{ fontSize:12, fontWeight:700, color:i===activePipe?'#fff':'#cbd5e1' }}>{p.step}</div>
-                <div style={{ fontSize:11, color:i===activePipe?'#a7f3d0':'#64748b', marginTop:3, lineHeight:1.4 }}>{p.detail}</div>
+      {/* Animated pipeline */}
+      <div className="mb-8">
+        <h2 className="text-center font-black text-[#e6edf3] mb-4 text-lg">🔄 Autonomous Pipeline — Live</h2>
+        <div className="flex items-center gap-1 overflow-x-auto pb-2">
+          {PIPELINE.map((p,i)=>(
+            <div key={i} style={{ display:'flex', alignItems:'center', flex:1, minWidth:140 }}>
+              <div style={{
+                flex:1, borderRadius:14, padding:'14px 10px', textAlign:'center',
+                background: i===ap ? 'rgba(100,255,218,0.1)' : 'rgba(255,255,255,0.03)',
+                border: `1.5px solid ${i===ap ? '#64ffda' : 'rgba(255,255,255,0.07)'}`,
+                boxShadow: i===ap ? '0 0 20px rgba(100,255,218,0.2)' : 'none',
+                transition: 'all 0.5s ease',
+              }}>
+                <div style={{ fontSize:24, marginBottom:5 }}>{p.icon}</div>
+                <div style={{ fontSize:11.5, fontWeight:700, color: i===ap ? '#64ffda' : '#7d8590' }}>{p.step}</div>
+                <div style={{ fontSize:10, color: i===ap ? '#a7f3d0' : '#4a5568', marginTop:3, lineHeight:1.4 }}>{p.detail}</div>
               </div>
-              {i<PIPELINE.length-1&&<div style={{ color:i===activePipe?'#6ee7b7':'#334155', fontSize:20, margin:'0 5px', flexShrink:0 }}>›</div>}
+              {i<PIPELINE.length-1&&<span style={{ color:i===ap?'#64ffda':'#21262d', fontSize:18, margin:'0 3px', flexShrink:0 }}>›</span>}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Nav Grid */}
-      <div style={{ maxWidth:1100, margin:'0 auto 48px', padding:'0 20px' }}>
-        <h2 style={{ textAlign:'center', fontWeight:800, fontSize:20, marginBottom:22, color:'#e2e8f0' }}>🚀 Explore the Engine</h2>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:12 }}>
-          {LINKS.map(l => (
-            <Link key={l.href} href={l.href} className="card-hover" style={{ background:'#ffffff0d',
-              border:`1px solid ${l.color}55`, borderRadius:16, padding:'18px', textDecoration:'none', display:'block',
-              boxShadow:'0 2px 12px #00000033' }}>
-              <div style={{ width:42, height:42, borderRadius:11, background:`${l.color}22`,
-                border:`1px solid ${l.color}55`, display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:20, marginBottom:10 }}>{l.emoji}</div>
-              <div style={{ color:'#fff', fontWeight:700, fontSize:14, marginBottom:4 }}>{l.label}</div>
-              <div style={{ color:'#94a3b8', fontSize:12, lineHeight:1.5 }}>{l.sub}</div>
-              <div style={{ marginTop:10, fontSize:12, color:l.color, fontWeight:600 }}>Explore →</div>
-            </Link>
+      {/* Nav grid */}
+      <h2 className="text-center font-black text-[#e6edf3] mb-4 text-lg">🚀 Explore the Engine</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+        {LINKS.map(l=>(
+          <Link key={l.href} href={l.href} className="navcard block rounded-2xl p-5 no-underline" style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${l.color}33`, boxShadow:'0 2px 12px rgba(0,0,0,0.3)' }}>
+            <div style={{ width:40, height:40, borderRadius:10, background:`${l.color}18`, border:`1px solid ${l.color}44`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, marginBottom:10 }}>{l.emoji}</div>
+            <div style={{ color:'#e6edf3', fontWeight:700, fontSize:13, marginBottom:3 }}>{l.label}</div>
+            <div style={{ color:'#7d8590', fontSize:11, lineHeight:1.5 }}>{l.sub}</div>
+            <div style={{ marginTop:8, fontSize:11, color:l.color, fontWeight:600 }}>Explore →</div>
+          </Link>
+        ))}
+      </div>
+
+      {/* India Stack badges */}
+      <div className="glass p-5 mb-8">
+        <div className="text-center text-[10px] font-bold text-[#64ffda] tracking-widest uppercase mb-4">India Stack Integration</div>
+        <div className="flex flex-wrap gap-2 justify-center">
+          {['🆔 Aadhaar KYC','📁 DigiLocker','💳 UPI / IMPS','🌾 PM-FASAL','🛰️ NASA MODIS','🌧️ IMD Rainfall','🌡️ ISRO Bhuvan','🌱 ICAR Soil','⛓️ SHA-256 Ledger','🤖 NaiveBayes ML','🏛️ NPCI UTR','📱 SMS Fallback'].map(b=>(
+            <span key={b} style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:999, padding:'5px 12px', fontSize:11.5, color:'#e6edf3' }}>{b}</span>
           ))}
         </div>
       </div>
 
-      {/* India Stack badge row */}
-      <div style={{ maxWidth:1100, margin:'0 auto 48px', padding:'0 20px' }}>
-        <div style={{ background:'#ffffff0a', border:'1px solid #ffffff1a', borderRadius:20, padding:'24px 28px' }}>
-          <div style={{ textAlign:'center', marginBottom:18 }}>
-            <span style={{ fontSize:13, fontWeight:700, color:'#6ee7b7', letterSpacing:'0.1em', textTransform:'uppercase' }}>India Stack Integration</span>
-          </div>
-          <div style={{ display:'flex', flexWrap:'wrap', gap:10, justifyContent:'center' }}>
-            {[['🆔','Aadhaar KYC'],['📁','DigiLocker'],['💳','UPI / IMPS'],['🌾','PM-FASAL Subsidy'],
-              ['🛰️','NASA MODIS NDVI'],['🌧️','IMD Rainfall'],['🌡️','ISRO Bhuvan'],['🌱','ICAR Soil'],
-              ['⛓️','SHA-256 Ledger'],['🤖','NaiveBayes ML'],['🏛️','NPCI UTR'],['📱','SMS Fallback']
-            ].map(([icon,label]) => (
-              <span key={label as string} style={{ background:'#ffffff12', border:'1px solid #ffffff22',
-                borderRadius:999, padding:'6px 14px', fontSize:12, fontWeight:600, color:'#e2e8f0',
-                display:'flex', alignItems:'center', gap:6 }}><span>{icon}</span><span>{label}</span></span>
-            ))}
-          </div>
-        </div>
+      <div className="text-center text-[#7d8590] text-xs pb-6">
+        Built for SBI Global Fintech Fest 2026 · YONO-Oracle Intelligent Insurance Engine · All engines live on Vercel Edge
       </div>
-
-      {/* Footer */}
-      <div style={{ textAlign:'center', padding:'0 20px 40px', color:'#475569', fontSize:12 }}>
-        <div style={{ color:'#334155', marginBottom:6 }}>Built for SBI Global Fintech Fest 2026 · YONO-Oracle Intelligent Insurance Engine</div>
-        <div>All engines live on Vercel Edge · Next.js 14 · 100% serverless · Zero external dependencies</div>
-      </div>
-    </main>
+    </div>
   );
 }
