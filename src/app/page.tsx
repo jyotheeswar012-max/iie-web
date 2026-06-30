@@ -3,39 +3,39 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
 const STATS = [
-  { value:'₹1.22L',  label:'Max Coverage',     sub:'Full Season Pro' },
-  { value:'4',        label:'Oracle Sources',   sub:'NASA · IMD · ISRO · ICAR' },
-  { value:'≥75%',   label:'AI Quorum',         sub:'3-agent weighted vote' },
+  { value:'\u20B91.22L',  label:'Max Coverage',     sub:'Full Season Pro' },
+  { value:'4',        label:'Oracle Sources',   sub:'NASA \u00B7 IMD \u00B7 ISRO \u00B7 ICAR' },
+  { value:'\u226575%',   label:'AI Quorum',         sub:'3-agent weighted vote' },
   { value:'<3s',      label:'Payout Speed',     sub:'IMPS settlement' },
   { value:'6',        label:'FSM States',       sub:'FRAUD_REVIEW path' },
   { value:'GB v3.0',  label:'ML Model',         sub:'Gradient Boosting' },
 ];
 
 const LINKS = [
-  { href:'/demo',         emoji:'⚡', label:'Live Demo',         sub:'5-step engine walkthrough',        color:'#64ffda' },
-  { href:'/agents',       emoji:'🤖', label:'Agent Quorum',       sub:'3-agent live voting panel',       color:'#a78bfa' },
-  { href:'/risk',         emoji:'🛰️', label:'Oracle Feed',        sub:'Live multi-district risk data',   color:'#e040fb' },
-  { href:'/dashboard',    emoji:'🗺️', label:'Dashboard',          sub:'Map + district risk heatmap',     color:'#38bdf8' },
-  { href:'/payouts',      emoji:'💸', label:'Payout Tracker',     sub:'IMPS credits + UPI references',   color:'#f9d423' },
-  { href:'/blockchain',   emoji:'🔗', label:'Audit Chain',        sub:'SHA-256 tamper-evident ledger',   color:'#64ffda' },
-  { href:'/impact',       emoji:'📊', label:'GFF Impact',         sub:'Claims 6mo→3s · Fraud −91%',     color:'#e3b341' },
-  { href:'/architecture', emoji:'🏗️', label:'Architecture',       sub:'System design overview',         color:'#3fb950' },
+  { href:'/demo',         emoji:'\u26A1',       label:'Live Demo',         sub:'5-step engine walkthrough',        color:'#64ffda' },
+  { href:'/agents',       emoji:'\u{1F916}',    label:'Agent Quorum',       sub:'3-agent live voting panel',       color:'#a78bfa' },
+  { href:'/risk',         emoji:'\u{1F6F0}',    label:'Oracle Feed',        sub:'Live multi-district risk data',   color:'#e040fb' },
+  { href:'/dashboard',    emoji:'\u{1F5FA}',    label:'Dashboard',          sub:'Map + district risk heatmap',     color:'#38bdf8' },
+  { href:'/payouts',      emoji:'\u{1F4B8}',    label:'Payout Tracker',     sub:'IMPS credits + UPI references',   color:'#f9d423' },
+  { href:'/blockchain',   emoji:'\u{1F517}',    label:'Audit Chain',        sub:'SHA-256 tamper-evident ledger',   color:'#64ffda' },
+  { href:'/impact',       emoji:'\u{1F4CA}',    label:'GFF Impact',         sub:'Claims 6mo\u21923s \u00B7 Fraud \u221291%',     color:'#e3b341' },
+  { href:'/architecture', emoji:'\u{1F3D7}',    label:'Architecture',       sub:'System design overview',         color:'#3fb950' },
 ];
 
 const PIPELINE = [
-  { icon:'📋', step:'KYC + Enroll',    detail:'Aadhaar · DigiLocker · PM-FASAL' },
-  { icon:'🛰️', step:'Oracle Fetch',    detail:'NASA · IMD · ISRO · ICAR' },
-  { icon:'🤖', step:'AI Quorum',       detail:'3 agents · ≥75% triggers' },
-  { icon:'🔗', step:'FSM Transition',  detail:'TRIGGERED→EXECUTED|FRAUD_REVIEW' },
-  { icon:'💸', step:'IMPS Payout',     detail:'UPI ref · RRN · SMS <3s' },
+  { icon:'\u{1F4CB}', step:'KYC + Enroll',    detail:'Aadhaar \u00B7 DigiLocker \u00B7 PM-FASAL' },
+  { icon:'\u{1F6F0}', step:'Oracle Fetch',    detail:'NASA \u00B7 IMD \u00B7 ISRO \u00B7 ICAR' },
+  { icon:'\u{1F916}', step:'AI Quorum',       detail:'3 agents \u00B7 \u226575% triggers' },
+  { icon:'\u{1F517}', step:'FSM Transition',  detail:'TRIGGERED\u2192EXECUTED|FRAUD_REVIEW' },
+  { icon:'\u{1F4B8}', step:'IMPS Payout',     detail:'UPI ref \u00B7 RRN \u00B7 SMS <3s' },
 ];
 
 const IMPACT = [
   { label:'Claim time',    before:'6 months', after:'<3 seconds', delta:'99.998% faster' },
   { label:'Forms filed',   before:'12 forms',  after:'0 forms',    delta:'100% gone' },
   { label:'Fraud rate',    before:'23%',       after:'<2%',        delta:'-91%' },
-  { label:'Admin cost',    before:'₹4,800',    after:'₹38',        delta:'-99.2%' },
-  { label:'Farmers reach', before:'4.2 Cr',    after:'14 Cr+',     delta:'3.3× scale' },
+  { label:'Admin cost',    before:'\u20B94,800',    after:'\u20B938',        delta:'-99.2%' },
+  { label:'Farmers reach', before:'4.2 Cr',    after:'14 Cr+',     delta:'3.3\u00D7 scale' },
 ];
 
 const FSM_STATES = ['ACTIVE','TRIGGERED','FRAUD_REVIEW','EXECUTED','REJECTED'] as const;
@@ -43,14 +43,17 @@ type FsmState = typeof FSM_STATES[number];
 const FSM_COL: Record<FsmState,string> = {
   ACTIVE:'#34d399', TRIGGERED:'#fbbf24', FRAUD_REVIEW:'#f97316', EXECUTED:'#4ade80', REJECTED:'#f87171',
 };
+const FSM_ICO: Record<FsmState,string> = {
+  ACTIVE:'\u{1F7E2}', TRIGGERED:'\u26A1', FRAUD_REVIEW:'\u{1F575}', EXECUTED:'\u2705', REJECTED:'\u274C',
+};
 const FSM_SEQ: FsmState[] = ['ACTIVE','TRIGGERED','EXECUTED'];
 const FSM_FRAUD: FsmState[] = ['ACTIVE','TRIGGERED','FRAUD_REVIEW','EXECUTED'];
 
 const TECH_BADGES = [
-  '🆔 Aadhaar KYC','📁 DigiLocker','💳 UPI / IMPS','🌾 PM-FASAL',
-  '🛰️ NASA MODIS','🌧️ IMD Rainfall','🌡️ ISRO Bhuvan','🌱 ICAR Soil',
-  '⛓️ SHA-256 Ledger','🤖 GB v3.0 ML','🏦 Polygon Mumbai','📱 SMS Fallback',
-  '🏷️ Hyperledger Fabric','⚡ Vercel Edge',
+  '\u{1F194} Aadhaar KYC','\u{1F4C1} DigiLocker','\u{1F4B3} UPI / IMPS','\u{1F33E} PM-FASAL',
+  '\u{1F6F0} NASA MODIS','\u{1F327} IMD Rainfall','\u{1F321} ISRO Bhuvan','\u{1F331} ICAR Soil',
+  '\u26D3 SHA-256 Ledger','\u{1F916} GB v3.0 ML','\u{1F3E6} Polygon Mumbai','\u{1F4F1} SMS Fallback',
+  '\u{1F3F7} Hyperledger Fabric','\u26A1 Vercel Edge',
 ];
 
 export default function HomePage() {
@@ -71,7 +74,6 @@ export default function HomePage() {
     return ()=>{clearInterval(t1);clearInterval(t2);clearInterval(t3);clearInterval(t4);};
   }, []);
 
-  /* alternate FSM path every 12s and animate forward */
   useEffect(() => {
     const seq = fsmTick % 28;
     if (seq===0)  { setFsmPath(FSM_SEQ);   setFsmStep(0); }
@@ -85,7 +87,7 @@ export default function HomePage() {
 
   const ap  = tick  % PIPELINE.length;
   const im  = IMPACT[itick % IMPACT.length];
-  const fmt = (n:number) => n>=1e7 ? '₹'+(n/1e7).toFixed(2)+' Cr' : '₹'+(n/1e5).toFixed(1)+' L';
+  const fmt = (n:number) => n>=1e7 ? '\u20B9'+(n/1e7).toFixed(2)+' Cr' : '\u20B9'+(n/1e5).toFixed(1)+' L';
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
@@ -104,7 +106,6 @@ export default function HomePage() {
         * { box-sizing:border-box }
       `}</style>
 
-      {/* ── Top status bar ── */}
       <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8,marginBottom:20,padding:'8px 14px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(63,185,80,0.2)',borderRadius:12 }}>
         <div style={{ display:'flex',alignItems:'center',gap:10,flexWrap:'wrap' }}>
           <span style={{ width:8,height:8,borderRadius:'50%',background:'#3fb950',boxShadow:'0 0 8px #3fb95099',display:'inline-block',flexShrink:0 }} />
@@ -119,25 +120,23 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── Hero ── */}
       <div className="text-center mb-10 fade-up">
-        <div className="text-6xl mb-4 floaty">🌾</div>
+        <div className="text-6xl mb-4 floaty">\u{1F33E}</div>
         <h1 className="text-5xl sm:text-6xl font-black mb-4 shimmer-text" style={{ background:'linear-gradient(90deg,#ffffff,#64ffda,#a78bfa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
           YONO-Oracle IIE
         </h1>
         <p style={{ color:'rgba(255,255,255,0.6)',fontSize:17,maxWidth:600,margin:'0 auto 8px',lineHeight:1.6 }}>
-          India’s first <b style={{ color:'#fff' }}>fully autonomous parametric crop insurance engine</b> —
+          India&apos;s first <b style={{ color:'#fff' }}>fully autonomous parametric crop insurance engine</b> \u2014
           oracle-verified, AI-quorum-governed, blockchain-audited, IMPS-settled.
         </p>
-        <p style={{ color:'#64ffda',fontSize:12,marginBottom:28 }}>NASA · IMD · ISRO · ICAR · PM-FASAL · DigiLocker · UPI · Aadhaar · Hyperledger Fabric</p>
+        <p style={{ color:'#64ffda',fontSize:12,marginBottom:28 }}>NASA \u00B7 IMD \u00B7 ISRO \u00B7 ICAR \u00B7 PM-FASAL \u00B7 DigiLocker \u00B7 UPI \u00B7 Aadhaar \u00B7 Hyperledger Fabric</p>
         <div style={{ display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap' }}>
-          <Link href="/demo" style={{ padding:'12px 28px',borderRadius:12,fontWeight:800,fontSize:13,color:'#030712',background:'linear-gradient(135deg,#64ffda,#3fb950)',boxShadow:'0 4px 24px rgba(100,255,218,0.35)',textDecoration:'none' }}>⚡ Start Live Demo →</Link>
-          <Link href="/agents" style={{ padding:'12px 22px',borderRadius:12,fontWeight:700,fontSize:13,color:'#e2e8f0',background:'rgba(167,139,250,0.12)',border:'1px solid rgba(167,139,250,0.35)',textDecoration:'none' }}>🤖 Agent Quorum</Link>
-          <Link href="/impact" style={{ padding:'12px 22px',borderRadius:12,fontWeight:700,fontSize:13,color:'#e2e8f0',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)',textDecoration:'none' }}>📊 Impact Metrics</Link>
+          <Link href="/demo" style={{ padding:'12px 28px',borderRadius:12,fontWeight:800,fontSize:13,color:'#030712',background:'linear-gradient(135deg,#64ffda,#3fb950)',boxShadow:'0 4px 24px rgba(100,255,218,0.35)',textDecoration:'none' }}>\u26A1 Start Live Demo \u2192</Link>
+          <Link href="/agents" style={{ padding:'12px 22px',borderRadius:12,fontWeight:700,fontSize:13,color:'#e2e8f0',background:'rgba(167,139,250,0.12)',border:'1px solid rgba(167,139,250,0.35)',textDecoration:'none' }}>\u{1F916} Agent Quorum</Link>
+          <Link href="/impact" style={{ padding:'12px 22px',borderRadius:12,fontWeight:700,fontSize:13,color:'#e2e8f0',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)',textDecoration:'none' }}>\u{1F4CA} Impact Metrics</Link>
         </div>
       </div>
 
-      {/* ── Stats ── */}
       <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:24 }} className="g6">
         {STATS.map((s,i)=>(
           <div key={i} className="glass text-center" style={{ padding:'16px 10px' }}>
@@ -149,27 +148,25 @@ export default function HomePage() {
       </div>
       <style>{`@media(max-width:640px){.g6{grid-template-columns:1fr 1fr!important}}`}</style>
 
-      {/* ── Live impact ticker ── */}
       <div style={{ borderRadius:16,padding:'16px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12,background:'linear-gradient(135deg,rgba(100,255,218,0.06),rgba(167,139,250,0.06))',border:'1px solid rgba(100,255,218,0.15)' }}>
         <div>
-          <div style={{ fontSize:10,fontWeight:700,color:'#64ffda',letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:6 }}>📈 Live Impact vs PMFBY</div>
+          <div style={{ fontSize:10,fontWeight:700,color:'#64ffda',letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:6 }}>\u{1F4C8} Live Impact vs PMFBY</div>
           <div key={itick} className="flip-in" style={{ fontSize:13 }}>
             <b style={{ color:'#fff' }}>{im.label}:</b>&nbsp;
-            <span style={{ color:'#f85149',textDecoration:'line-through' }}>{im.before}</span>&nbsp;→&nbsp;
+            <span style={{ color:'#f85149',textDecoration:'line-through' }}>{im.before}</span>&nbsp;\u2192&nbsp;
             <b style={{ color:'#3fb950' }}>{im.after}</b>&nbsp;
-            <span style={{ background:'rgba(63,185,80,0.15)',border:'1px solid rgba(63,185,80,0.35)',borderRadius:6,padding:'2px 8px',fontSize:11,color:'#3fb950',fontWeight:700 }}>▲ {im.delta}</span>
+            <span style={{ background:'rgba(63,185,80,0.15)',border:'1px solid rgba(63,185,80,0.35)',borderRadius:6,padding:'2px 8px',fontSize:11,color:'#3fb950',fontWeight:700 }}>\u25B2 {im.delta}</span>
           </div>
         </div>
         <div style={{ textAlign:'right' }}>
-          <div style={{ fontSize:10,color:'#64ffda',marginBottom:3 }}>🌾 LIVE · Total Coverage Active</div>
+          <div style={{ fontSize:10,color:'#64ffda',marginBottom:3 }}>\u{1F33E} LIVE \u00B7 Total Coverage Active</div>
           <div style={{ fontSize:26,fontWeight:900,color:'#e6edf3',fontFamily:'monospace' }}>{fmt(amt)}</div>
-          <div style={{ fontSize:10,color:'#7d8590' }}>demo simulation · updates every ~2s</div>
+          <div style={{ fontSize:10,color:'#7d8590' }}>demo simulation \u00B7 updates every ~2s</div>
         </div>
       </div>
 
-      {/* ── Animated pipeline ── */}
       <div style={{ marginBottom:20 }}>
-        <h2 style={{ textAlign:'center',fontWeight:900,color:'#e6edf3',marginBottom:12,fontSize:15 }}>🔄 Autonomous Pipeline — Live</h2>
+        <h2 style={{ textAlign:'center',fontWeight:900,color:'#e6edf3',marginBottom:12,fontSize:15 }}>\u{1F504} Autonomous Pipeline \u2014 Live</h2>
         <div style={{ display:'flex',alignItems:'center',gap:4,overflowX:'auto',paddingBottom:4 }}>
           {PIPELINE.map((p,i)=>(
             <div key={i} style={{ display:'flex',alignItems:'center',flex:1,minWidth:130 }}>
@@ -182,15 +179,14 @@ export default function HomePage() {
                 <div style={{ fontSize:11,fontWeight:700,color:i===ap?'#64ffda':'#7d8590' }}>{p.step}</div>
                 <div style={{ fontSize:9,color:i===ap?'#a7f3d0':'#4a5568',marginTop:3,lineHeight:1.4 }}>{p.detail}</div>
               </div>
-              {i<PIPELINE.length-1&&<span style={{ color:i===ap?'#64ffda':'#21262d',fontSize:16,margin:'0 2px',flexShrink:0 }}>›</span>}
+              {i<PIPELINE.length-1&&<span style={{ color:i===ap?'#64ffda':'#21262d',fontSize:16,margin:'0 2px',flexShrink:0 }}>\u203A</span>}
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Live FSM ticker ── */}
       <div style={{ marginBottom:20,borderRadius:16,padding:'16px 20px',background:'#0d1117',border:'1px solid #1e293b' }}>
-        <div style={{ fontSize:10,fontWeight:700,color:'#475569',letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:12 }}>🔗 6-State FSM — Live Animation</div>
+        <div style={{ fontSize:10,fontWeight:700,color:'#475569',letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:12 }}>\u{1F517} 6-State FSM \u2014 Live Animation</div>
         <div style={{ display:'flex',gap:6,flexWrap:'wrap',marginBottom:10 }}>
           {fsmPath.map((s,i)=>{
             const active  = i===fsmStep;
@@ -205,35 +201,33 @@ export default function HomePage() {
                   boxShadow:active?`0 0 14px ${col}44`:undefined,
                   animation:s==='FRAUD_REVIEW'&&active?'pulseRing 1.2s ease-in-out infinite':undefined,
                   transition:'all 0.4s ease' }}>
-                  {s==='ACTIVE'?'🟢':s==='TRIGGERED'?'⚡':s==='FRAUD_REVIEW'?'🕵️':s==='EXECUTED'?'✅':'❌'}&nbsp;{s}
+                  {FSM_ICO[s]}&nbsp;{s}
                 </div>
-                {i<fsmPath.length-1&&<span style={{ color:s==='FRAUD_REVIEW'?'#f97316':'#334155',fontSize:14 }}>→</span>}
+                {i<fsmPath.length-1&&<span style={{ color:s==='FRAUD_REVIEW'?'#f97316':'#334155',fontSize:14 }}>\u2192</span>}
               </div>
             );
           })}
         </div>
         <div style={{ fontSize:11,color:'#475569' }}>
           {fsmPath.includes('FRAUD_REVIEW')
-            ? '🕵️ Fraud path: ACTIVE → TRIGGERED → FRAUD_REVIEW → EXECUTED'
-            : '✅ Normal path: ACTIVE → TRIGGERED → EXECUTED'}
+            ? '\u{1F575} Fraud path: ACTIVE \u2192 TRIGGERED \u2192 FRAUD_REVIEW \u2192 EXECUTED'
+            : '\u2705 Normal path: ACTIVE \u2192 TRIGGERED \u2192 EXECUTED'}
         </div>
       </div>
 
-      {/* ── Nav grid ── */}
-      <h2 style={{ textAlign:'center',fontWeight:900,color:'#e6edf3',marginBottom:12,fontSize:15 }}>🚀 Explore the Engine</h2>
+      <h2 style={{ textAlign:'center',fontWeight:900,color:'#e6edf3',marginBottom:12,fontSize:15 }}>\u{1F680} Explore the Engine</h2>
       <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:24 }} className="ng">
         {LINKS.map(l=>(
           <Link key={l.href} href={l.href} className="navcard" style={{ display:'block',borderRadius:16,padding:'16px 14px',textDecoration:'none',background:'rgba(255,255,255,0.03)',border:`1px solid ${l.color}33`,boxShadow:'0 2px 12px rgba(0,0,0,0.3)' }}>
             <div style={{ width:38,height:38,borderRadius:9,background:`${l.color}18`,border:`1px solid ${l.color}44`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,marginBottom:9 }}>{l.emoji}</div>
             <div style={{ color:'#e6edf3',fontWeight:700,fontSize:12,marginBottom:3 }}>{l.label}</div>
             <div style={{ color:'#7d8590',fontSize:10,lineHeight:1.5 }}>{l.sub}</div>
-            <div style={{ marginTop:7,fontSize:11,color:l.color,fontWeight:600 }}>Explore →</div>
+            <div style={{ marginTop:7,fontSize:11,color:l.color,fontWeight:600 }}>Explore \u2192</div>
           </Link>
         ))}
       </div>
       <style>{`@media(max-width:768px){.ng{grid-template-columns:1fr 1fr!important}}`}</style>
 
-      {/* ── Tech badges ── */}
       <div className="glass" style={{ padding:'16px 18px',marginBottom:20 }}>
         <div style={{ textAlign:'center',fontSize:10,fontWeight:700,color:'#64ffda',letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:10 }}>Tech Stack</div>
         <div style={{ display:'flex',flexWrap:'wrap',gap:7,justifyContent:'center' }}>
@@ -243,7 +237,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── Footer nav ── */}
       <div style={{ borderTop:'1px solid #1e293b',paddingTop:16,display:'flex',flexWrap:'wrap',justifyContent:'center',gap:12,marginBottom:8 }}>
         {[
           ['/demo','Demo'],
@@ -260,7 +253,7 @@ export default function HomePage() {
         ))}
       </div>
       <div style={{ textAlign:'center',color:'#4a5568',fontSize:10,paddingBottom:16 }}>
-        Built for SBI Global Fintech Fest 2026 · YONO-Oracle Intelligent Insurance Engine · Vercel Edge
+        Built for SBI Global Fintech Fest 2026 \u00B7 YONO-Oracle Intelligent Insurance Engine \u00B7 Vercel Edge
       </div>
     </div>
   );
