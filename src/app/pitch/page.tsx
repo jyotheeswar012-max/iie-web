@@ -3,16 +3,12 @@ import { useState, useEffect, useRef } from 'react';
 
 type Tab = 'script' | 'deck' | 'video' | 'qa';
 
-// ── colours ────────────────────────────────────────────────────────────────
 const C = {
   bg: '#030712', panel: '#0d1117', border: 'rgba(255,255,255,0.08)',
   text: '#e6edf3', sub: '#7d8590',
   teal: '#64ffda', green: '#3fb950', yellow: '#e3b341', blue: '#82b1ff', red: '#f85149', purple: '#e040fb',
 };
 
-// ══════════════════════════════════════════════════════════════════════════════
-// 1. DEMO SCRIPT
-// ══════════════════════════════════════════════════════════════════════════════
 const SCRIPT_SECTIONS = [
   {
     id: 1, title: 'The Hook', time: '0:00–0:20', color: C.teal, cue: '🎤 Face judges — NO slides yet',
@@ -82,7 +78,6 @@ function DemoScript() {
 
   return (
     <div>
-      {/* Timer bar */}
       <div style={{ background: C.panel, borderRadius: 16, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
           <div>
@@ -101,7 +96,6 @@ function DemoScript() {
         </div>
       </div>
 
-      {/* Step nav pills */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {SCRIPT_SECTIONS.map((s, i) => (
           <button key={s.id} onClick={() => setStep(i)}
@@ -111,7 +105,6 @@ function DemoScript() {
         ))}
       </div>
 
-      {/* Current section card */}
       <div style={{ borderRadius: 20, border: `2px solid ${sec.color}44`, background: `${sec.color}06`, padding: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
           <div>
@@ -146,9 +139,6 @@ function DemoScript() {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// 2. PITCH DECK
-// ══════════════════════════════════════════════════════════════════════════════
 const SLIDES = [
   { id: 1,  title: 'IIE — Intelligent Insurance Engine', sub: 'SBI Fintech Fest 2026', color: C.teal,
     bullets: ['Zero-paperwork parametric crop insurance', 'Powered by India Stack + AI oracles + blockchain', 'Settlement in < 3 seconds via NPCI IMPS'],
@@ -189,9 +179,7 @@ function PitchDeck() {
 
   return (
     <div>
-      {/* 16:9 slide card */}
       <div style={{ borderRadius: 20, border: `2px solid ${s.color}44`, background: `linear-gradient(135deg, #0d1117 0%, #0a0f1e 60%, ${s.color}0a 100%)`, aspectRatio: '16/9', padding: '5% 6%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
-        {/* Corner watermark */}
         <div style={{ position: 'absolute', top: 16, right: 20, fontSize: 11, fontWeight: 800, color: `${s.color}88`, letterSpacing: 2, textTransform: 'uppercase' }}>SBI Fintech Fest 2026 · IIE</div>
         <div style={{ position: 'absolute', bottom: 16, right: 20, fontSize: 11, color: C.sub }}>{s.id} / {SLIDES.length}</div>
 
@@ -211,7 +199,6 @@ function PitchDeck() {
         </div>
       </div>
 
-      {/* Speaker notes toggle */}
       <div style={{ marginBottom: 12 }}>
         <button onClick={() => setNotesOpen(o => !o)} style={{ padding: '8px 16px', borderRadius: 10, border: `1px solid ${C.border}`, background: notesOpen ? `${C.yellow}18` : 'transparent', color: notesOpen ? C.yellow : C.sub, fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>🗒 Speaker Notes {notesOpen ? '▲' : '▼'}</button>
         {notesOpen && (
@@ -219,18 +206,17 @@ function PitchDeck() {
         )}
       </div>
 
-      {/* Slide strip */}
+      {/* Slide strip — fixed: no WebkitBoxOrient inline style */}
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8 }}>
         {SLIDES.map((sl, i) => (
           <button key={sl.id} onClick={() => setSlide(i)}
-            style={{ flexShrink: 0, width: 80, height: 50, borderRadius: 8, border: `2px solid ${slide === i ? sl.color : C.border}`, background: slide === i ? `${sl.color}18` : C.panel, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+            style={{ flexShrink: 0, width: 80, height: 50, borderRadius: 8, border: `2px solid ${slide === i ? sl.color : C.border}`, background: slide === i ? `${sl.color}18` : C.panel, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, overflow: 'hidden' }}>
             <div style={{ fontSize: 9, fontWeight: 800, color: slide === i ? sl.color : C.sub }}>{sl.id}</div>
-            <div style={{ fontSize: 7, color: C.sub, textAlign: 'center', lineHeight: 1.2, padding: '0 4px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{sl.title}</div>
+            <div style={{ fontSize: 7, color: C.sub, textAlign: 'center', lineHeight: 1.2, padding: '0 4px', overflow: 'hidden', maxHeight: 22, width: '100%' }}>{sl.title}</div>
           </button>
         ))}
       </div>
 
-      {/* Prev / Next */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
         <button onClick={() => setSlide(s => Math.max(0, s - 1))} disabled={slide === 0}
           style={{ padding: '10px 24px', borderRadius: 12, border: `1px solid ${C.border}`, background: 'transparent', color: slide === 0 ? C.sub : C.text, fontWeight: 700, cursor: slide === 0 ? 'default' : 'pointer' }}>← Prev</button>
@@ -241,20 +227,17 @@ function PitchDeck() {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// 3. VIDEO GUIDE
-// ══════════════════════════════════════════════════════════════════════════════
 const SHOTS = [
-  { id: 1,  time: '0:00–0:08', title: 'Talking head intro',       screen: 'Camera only',           action: 'Look directly into camera. Say the hook line. Confident, slow.', tip: 'Natural light from window on your left.' },
-  { id: 2,  time: '0:08–0:20', title: 'Problem stats overlay',    screen: '/dashboard — KPI strip', action: 'Narrate: "150 million farmers, 47 days, 42% denied." Click each KPI.', tip: 'Use Loom cursor highlight on each number.' },
-  { id: 3,  time: '0:20–0:35', title: 'YONO splash → login',      screen: '/yono — screens 1-2',    action: 'Narrate enrollment flow. Click through splash and MPIN screens.', tip: 'Keep pace slow — judges may not know YONO.' },
-  { id: 4,  time: '0:35–0:50', title: 'Voice enrollment demo',    screen: '/multimodal — Voice tab', action: 'Click the mic. Speak "Mera naam Ramesh hai" — watch AI parse live.', tip: 'Speak clearly and slightly slowly for demo effect.' },
-  { id: 5,  time: '0:50–1:05', title: 'Aadhaar eKYC + DigiLocker', screen: '/yono — screens 5-6',   action: 'Show consent checkboxes → OTP → verified badge → DigiLocker fetch.', tip: 'Pause on the "Aadhaar Verified" green badge.' },
-  { id: 6,  time: '1:05–1:20', title: 'Oracle + smart contract',  screen: '/yono — screens 7-8',    action: 'Show processing animation. Say "NASA, IMD, ISRO data — quorum 94%."', tip: 'Let the step animation finish naturally.' },
-  { id: 7,  time: '1:20–1:30', title: 'IMPS payout receipt',      screen: '/yono — screen 10',      action: 'Show ₹48,200 payout. Say "2.3 seconds. No agent. No form."', tip: 'Zoom into the RRN and UPI reference numbers.' },
-  { id: 8,  time: '1:30–1:42', title: 'India Stack architecture', screen: '/india-stack',            action: 'Walk through Aadhaar, DigiLocker, NPCI layer cards briefly.', tip: 'Say "100% sovereign infrastructure" — SBI loves this.' },
-  { id: 9,  time: '1:42–1:52', title: 'Roadmap timeline',         screen: '/dashboard — Roadmap',   action: 'Scroll to roadmap. Point: Q4 IRDAI sandbox → Q1 SBI pilot.', tip: 'Keep at 10 seconds — don\'t over-explain.' },
-  { id: 10, time: '1:52–2:00', title: 'Ask + sign-off',           screen: 'Camera only',            action: 'Face camera. "50 lakh farmers. Under 3 seconds. Built on India. Thank you."', tip: 'Smile and hold 2 seconds after final word.' },
+  { id: 1,  time: '0:00–0:08', title: 'Talking head intro',        screen: 'Camera only',            action: 'Look directly into camera. Say the hook line. Confident, slow.', tip: 'Natural light from window on your left.' },
+  { id: 2,  time: '0:08–0:20', title: 'Problem stats overlay',     screen: '/dashboard — KPI strip',  action: 'Narrate: "150 million farmers, 47 days, 42% denied." Click each KPI.', tip: 'Use Loom cursor highlight on each number.' },
+  { id: 3,  time: '0:20–0:35', title: 'YONO splash → login',       screen: '/yono — screens 1-2',     action: 'Narrate enrollment flow. Click through splash and MPIN screens.', tip: 'Keep pace slow — judges may not know YONO.' },
+  { id: 4,  time: '0:35–0:50', title: 'Voice enrollment demo',     screen: '/multimodal — Voice tab', action: 'Click the mic. Speak "Mera naam Ramesh hai" — watch AI parse live.', tip: 'Speak clearly and slightly slowly for demo effect.' },
+  { id: 5,  time: '0:50–1:05', title: 'Aadhaar eKYC + DigiLocker', screen: '/yono — screens 5-6',     action: 'Show consent checkboxes → OTP → verified badge → DigiLocker fetch.', tip: 'Pause on the "Aadhaar Verified" green badge.' },
+  { id: 6,  time: '1:05–1:20', title: 'Oracle + smart contract',   screen: '/yono — screens 7-8',     action: 'Show processing animation. Say "NASA, IMD, ISRO data — quorum 94%."', tip: 'Let the step animation finish naturally.' },
+  { id: 7,  time: '1:20–1:30', title: 'IMPS payout receipt',       screen: '/yono — screen 10',       action: 'Show ₹48,200 payout. Say "2.3 seconds. No agent. No form."', tip: 'Zoom into the RRN and UPI reference numbers.' },
+  { id: 8,  time: '1:30–1:42', title: 'India Stack architecture',  screen: '/india-stack',            action: 'Walk through Aadhaar, DigiLocker, NPCI layer cards briefly.', tip: 'Say "100% sovereign infrastructure" — SBI loves this.' },
+  { id: 9,  time: '1:42–1:52', title: 'Roadmap timeline',          screen: '/dashboard — Roadmap',    action: 'Scroll to roadmap. Point: Q4 IRDAI sandbox → Q1 SBI pilot.', tip: 'Keep at 10 seconds — don\'t over-explain.' },
+  { id: 10, time: '1:52–2:00', title: 'Ask + sign-off',            screen: 'Camera only',             action: 'Face camera. "50 lakh farmers. Under 3 seconds. Built on India. Thank you."', tip: 'Smile and hold 2 seconds after final word.' },
 ];
 
 function VideoGuide() {
@@ -266,15 +249,15 @@ function VideoGuide() {
   useEffect(() => {
     if (playing) {
       ref.current = setInterval(() => {
-        setTick(t => {
-          const next = t + 1;
+        setTick(prev => {
+          const next = prev + 1;
           const pct = (next / 120) * 100;
           const shotIdx = Math.min(Math.floor((pct / 100) * SHOTS.length), SHOTS.length - 1);
           setActiveShot(shotIdx);
           if (next >= 120) { setPlaying(false); return 120; }
           return next;
         });
-      }, 100); // 10x speed for demo
+      }, 100);
     } else {
       if (ref.current) clearInterval(ref.current);
     }
@@ -286,7 +269,6 @@ function VideoGuide() {
 
   return (
     <div>
-      {/* Simulate player */}
       <div style={{ background: C.panel, borderRadius: 16, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
           <div>
@@ -302,8 +284,7 @@ function VideoGuide() {
               style={{ padding: '10px 20px', borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>↺ Reset</button>
           </div>
         </div>
-        {/* Timeline */}
-        <div style={{ position: 'relative', height: 8, borderRadius: 4, background: '#1e293b', marginBottom: 6, cursor: 'pointer' }}>
+        <div style={{ position: 'relative', height: 8, borderRadius: 4, background: '#1e293b', marginBottom: 6 }}>
           {SHOTS.map((sh, i) => (
             <div key={sh.id} style={{ position: 'absolute', left: `${(i / SHOTS.length) * 100}%`, top: 0, width: `${(1 / SHOTS.length) * 100}%`, height: '100%', borderRight: '1px solid #030712' }} />
           ))}
@@ -314,7 +295,6 @@ function VideoGuide() {
         </div>
       </div>
 
-      {/* Shot list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {SHOTS.map((sh, i) => (
           <div key={sh.id} onClick={() => setActiveShot(i)}
@@ -338,9 +318,6 @@ function VideoGuide() {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// 4. Q&A PREP
-// ══════════════════════════════════════════════════════════════════════════════
 const QA = [
   {
     q: 'How is this different from PMFBY or existing insurtech players like Fasal?',
@@ -396,8 +373,8 @@ function QAPrep() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 800, fontSize: 14, color: open === i ? item.color : C.text, lineHeight: 1.4, marginBottom: 6 }}>{item.q}</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {item.tags.map(t => (
-                    <span key={t} style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}33` }}>{t}</span>
+                  {item.tags.map(tag => (
+                    <span key={tag} style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}33` }}>{tag}</span>
                   ))}
                 </div>
               </div>
@@ -415,44 +392,37 @@ function QAPrep() {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// PAGE SHELL
-// ══════════════════════════════════════════════════════════════════════════════
 const TABS: { id: Tab; label: string; icon: string; color: string }[] = [
   { id: 'script', label: 'Demo Script',  icon: '🎤', color: C.teal   },
   { id: 'deck',   label: 'Pitch Deck',   icon: '📊', color: C.blue   },
   { id: 'video',  label: 'Video Guide',  icon: '🎬', color: C.purple },
-  { id: 'qa',     label: 'Q&A Prep',     icon: '🧑‍⚖️', color: C.yellow },
+  { id: 'qa',     label: 'Q&A Prep',     icon: '⚖️', color: C.yellow },
 ];
 
 export default function PitchPage() {
   const [tab, setTab] = useState<Tab>('script');
-  const active = TABS.find(t => t.id === tab)!;
+  const active = TABS.find(tb => tb.id === tab)!;
 
   return (
     <div style={{ background: C.bg, color: C.text, minHeight: '100vh' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 48px' }}>
-        {/* Header */}
         <div style={{ borderRadius: 20, background: 'linear-gradient(135deg,#0d1117,#0a0f1e,#0d1b4b)', border: `1px solid ${C.border}`, padding: 28, marginBottom: 20 }}>
           <div style={{ fontSize: 11, color: C.teal, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>SBI Fintech Fest 2026 · IIE</div>
           <h1 style={{ margin: '0 0 8px', fontSize: 32, fontWeight: 900 }}>Pitch Toolkit</h1>
           <p style={{ margin: 0, fontSize: 14, color: C.sub, maxWidth: 620 }}>Everything you need to deliver a winning 2-minute demo — script, slides, Loom guide, and judge Q&A.</p>
         </div>
 
-        {/* Tab bar */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ padding: '10px 20px', borderRadius: 12, border: `1px solid ${tab === t.id ? t.color : C.border}`, background: tab === t.id ? `${t.color}18` : C.panel, color: tab === t.id ? t.color : C.sub, fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}>
-              <span>{t.icon}</span>{t.label}
+          {TABS.map(tb => (
+            <button key={tb.id} onClick={() => setTab(tb.id)}
+              style={{ padding: '10px 20px', borderRadius: 12, border: `1px solid ${tab === tb.id ? tb.color : C.border}`, background: tab === tb.id ? `${tb.color}18` : C.panel, color: tab === tb.id ? tb.color : C.sub, fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}>
+              <span>{tb.icon}</span>{tb.label}
             </button>
           ))}
         </div>
 
-        {/* Active tab label */}
         <div style={{ marginBottom: 16, fontSize: 12, color: active.color, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2 }}>{active.icon} {active.label}</div>
 
-        {/* Tab content */}
         {tab === 'script' && <DemoScript />}
         {tab === 'deck'   && <PitchDeck />}
         {tab === 'video'  && <VideoGuide />}
