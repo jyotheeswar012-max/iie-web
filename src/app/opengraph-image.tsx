@@ -19,44 +19,25 @@ export default function OGImage() {
       style={{
         width: '100%',
         height: '100%',
-        background: 'linear-gradient(135deg,#030712 0%,#0a1628 60%,#051a12 100%)',
+        background: 'linear-gradient(135deg, #030712 0%, #0a1628 60%, #051a12 100%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: 'system-ui,sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         padding: '60px 80px',
         position: 'relative',
       }}
     >
-      {/* Grid overlay — use separate divs to avoid rgba() inside backgroundImage */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: 'linear-gradient(#34d39908 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-          display: 'flex',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: 'linear-gradient(90deg, #34d39908 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-          display: 'flex',
-        }}
-      />
-
+      {/* Live badge */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 10,
           marginBottom: 28,
-          background: '#34d3991f',
-          border: '1px solid #34d3994d',
+          background: '#0d3d2a',
+          border: '1px solid #34d399',
           borderRadius: 40,
           padding: '8px 20px',
         }}
@@ -82,6 +63,7 @@ export default function OGImage() {
         </span>
       </div>
 
+      {/* Title */}
       <div
         style={{
           fontSize: 72,
@@ -94,10 +76,11 @@ export default function OGImage() {
         YONO-Oracle IIE
       </div>
 
+      {/* Subtitle */}
       <div
         style={{
           fontSize: 22,
-          color: '#ffffff99',
+          color: '#94a3b8',
           textAlign: 'center',
           maxWidth: 700,
           lineHeight: 1.5,
@@ -105,9 +88,10 @@ export default function OGImage() {
           display: 'flex',
         }}
       >
-        India&apos;s first fully autonomous parametric crop insurance engine
+        India's first fully autonomous parametric crop insurance engine
       </div>
 
+      {/* Pills */}
       <div
         style={{
           display: 'flex',
@@ -120,8 +104,8 @@ export default function OGImage() {
           <div
             key={t}
             style={{
-              background: '#ffffff12',
-              border: '1px solid #ffffff1f',
+              background: '#1e293b',
+              border: '1px solid #334155',
               borderRadius: 8,
               padding: '8px 16px',
               fontSize: 15,
@@ -134,6 +118,7 @@ export default function OGImage() {
         ))}
       </div>
 
+      {/* Footer */}
       <div
         style={{
           position: 'absolute',
