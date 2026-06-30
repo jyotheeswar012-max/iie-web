@@ -66,14 +66,15 @@ function Badge({ label, color='#0f766e' }: { label:string; color?:string }) {
   return <span style={{ background:`${color}22`,color,border:`1px solid ${color}44`,borderRadius:6,padding:'2px 9px',fontSize:11,fontWeight:600,whiteSpace:'nowrap' }}>{label}</span>;
 }
 function Dot({ s }: { s:CState }) {
-  const c = STATE_COL[s];
+  const c = STATE_COL[s] ?? '#94a3b8';
   return <span style={{ display:'inline-flex',alignItems:'center',gap:5 }}>
     <span style={{ width:8,height:8,borderRadius:'50%',background:c,boxShadow:`0 0 7px ${c}`,display:'inline-block',animation:s==='TRIGGERED'||s==='FRAUD_REVIEW'?'pulse 1s infinite':undefined }} />
     <b style={{ color:c,fontSize:12 }}>{s}</b>
   </span>;
 }
-function Card({ children, style }: { children:React.ReactNode; style?:React.CSSProperties }) {
-  return <div style={{ background:'#0f172a',border:'1px solid #1e293b',borderRadius:14,padding:'18px 20px',...style }}>{children}</div>;
+// FIX: added className to Card interface so <Card className="fi cel"> no longer crashes
+function Card({ children, style, className }: { children:React.ReactNode; style?:React.CSSProperties; className?:string }) {
+  return <div className={className} style={{ background:'#0f172a',border:'1px solid #1e293b',borderRadius:14,padding:'18px 20px',...style }}>{children}</div>;
 }
 function Label({ children }: { children:React.ReactNode }) {
   return <div style={{ fontSize:10,color:'#64748b',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:3 }}>{children}</div>;
@@ -255,7 +256,7 @@ function ClaimModal({ exec, onClose, hindi }: { exec:ExecuteResult; onClose:()=>
           <div><span style={{ color:'#78716c' }}>{hindi?'परंपरागत:':'Traditional:'}</span> <b style={{ color:'#f87171' }}>180 {hindi?'दिन':'days'}</b></div>
           <div><span style={{ color:'#78716c' }}>IIE:</span> <b style={{ color:'#4ade80' }}>2.3 sec</b></div>
           <div><span style={{ color:'#78716c' }}>{hindi?'फ़ॉर्म:':'Forms:'}</span> <b style={{ color:'#4ade80' }}>{hindi?'शून्य':'Zero'}</b></div>
-          <div><span style={{ color:'#78716c' }}>{hindi?'धोखाधड़ी:':'Fraud:'}</span> <b style={{ color:'#4ade80' }}>{hindi?'असंभव':'Impossible'}</b></div>
+          <div><span style={{ color:'#78716c' }}>{hindi?'धोखाधड़ी:':'Fraud:'}</span> <b style={{ color:'#4ade80' }}>{hindi?'असंभव':'Impossible'}</b></div>
         </div>
         <button onClick={onClose} style={{ background:'linear-gradient(135deg,#065f46,#047857)',color:'#d1fae5',border:'none',borderRadius:10,padding:'11px 28px',fontSize:13,fontWeight:700,cursor:'pointer' }}>{hindi?'बंद करें':'Close'}</button>
       </div>
@@ -376,6 +377,9 @@ export default function DemoPage() {
   const done = (id:Step) => ORDER.indexOf(id) < ORDER.indexOf(step);
   const inp = (extra?:React.CSSProperties): React.CSSProperties => ({ width:'100%',border:'1px solid #1e293b',borderRadius:8,padding:'8px 11px',fontSize:13,background:'#030712',color:'#e2e8f0',transition:'border-color 0.2s',...extra });
 
+  // FIX: safe derivation of FSM current state — never passes a boolean
+  const fsmCurrent: CState|undefined = execute?.current_state ?? (execute?.success ? 'EXECUTED' : verify?.contract_state ?? undefined);
+
   return (
     <div style={{ minHeight:'100vh',background:'#030712',fontFamily:"'Inter',system-ui,sans-serif",color:'#e2e8f0' }}>
       <style>{`
@@ -425,7 +429,7 @@ export default function DemoPage() {
 
       <div style={{ background:'linear-gradient(135deg,#064e3b,#0c4a6e)',borderBottom:'1px solid #065f46',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10 }}>
         <div>
-          <div style={{ color:'#d1fae5',fontWeight:800,fontSize:14 }}>{hindi?'⚡ एक क्लिक डेमो — रमेश कुमार, बाड़मेर':'⚡ One-click Demo — Enroll Ramesh Kumar in Barmer'}</div>
+          <div style={{ color:'#d1fae5',fontWeight:800,fontSize:14 }}>{hindi?'⚡ एक क्लिक डेमो — रमेश कुमार, बाड़मेर':'⚡ One-click Demo — Enroll Ramesh Kumar in Barmer'}</div>
           <div style={{ color:'#6ee7b7',fontSize:11,marginTop:2 }}>{hindi?'नामांकन → ओरेकल → FSM पथ → ML पैनल':'Enroll → Oracle quorum → FSM path → ML metrics in one shot.'}</div>
         </div>
         <button onClick={doRamesh} disabled={loading} aria-label="One-click enroll Ramesh Kumar" style={{ background:loading?'#374151':'#ecfdf5',color:loading?'#9ca3af':'#065f46',border:'none',borderRadius:10,padding:'10px 22px',fontSize:13,fontWeight:800,display:'flex',alignItems:'center',gap:8,boxShadow:'0 4px 20px #00000066',flexShrink:0,transition:'all 0.2s' }}>
@@ -443,7 +447,7 @@ export default function DemoPage() {
             <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }} className="g2">
               <Card>
                 <h2 style={{ fontSize:13,fontWeight:700,marginBottom:12,color:'#e2e8f0' }}>{hindi?'किसान विवरण':'Farmer Details'}</h2>
-                {([['name',hindi?'किसान का नाम':'Farmer Name','text'],['aadhaar_last4',hindi?'आधार के अंतिम 4':'Aadhaar Last 4','text'],['district',hindi?'जिला':'District','text'],['state',hindi?'राज्य':'State','text'],['acreage',hindi?'एकड़':'Acreage (acres)','number']] as [keyof typeof form,string,string][]).map(([k,l,t])=>(
+                {([['name',hindi?'किसान का नाम':'Farmer Name','text'],['aadhaar_last4',hindi?'आधार के अंतिम 4':'Aadhaar Last 4','text'],['district',hindi?'जिला':'District','text'],['state',hindi?'राज्य':'State','text'],['acreage',hindi?'एकड़':'Acreage (acres)','number']] as [keyof typeof form,string,string][]).map(([k,l,t])=>(
                   <div key={k} style={{ marginBottom:10 }}><Label>{l}</Label><input value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} type={t} style={inp()} /></div>
                 ))}
               </Card>
@@ -472,7 +476,7 @@ export default function DemoPage() {
               <Card style={{ background:'#052e16',border:'1px solid #166534' }}>
                 <div style={{ fontSize:10,color:'#4ade80',fontWeight:700,marginBottom:7,letterSpacing:'0.05em' }}>✅ POLICY ISSUED</div>
                 <div style={{ fontSize:17,fontWeight:900,fontFamily:'monospace',marginBottom:8,color:'#d1fae5' }}>{policy.policy_id}</div>
-                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:5,marginBottom:7 }}>{[['£Coverage','₹'+policy.coverage_inr.toLocaleString()],['Net Premium','₹'+policy.net_premium_inr.toLocaleString()],['PM-FASAL','₹'+policy.subsidy_applied.toLocaleString()],['Block',String(policy.block_deployed)]].map(([k,v])=>(<div key={k}><div style={{ fontSize:9,color:'#64748b' }}>{k}</div><div style={{ fontSize:11,fontWeight:700,color:'#e2e8f0' }}>{v}</div></div>))}</div>
+                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:5,marginBottom:7 }}>{[['Coverage','₹'+policy.coverage_inr.toLocaleString()],['Net Premium','₹'+policy.net_premium_inr.toLocaleString()],['PM-FASAL','₹'+policy.subsidy_applied.toLocaleString()],['Block',String(policy.block_deployed)]].map(([k,v])=>(<div key={k}><div style={{ fontSize:9,color:'#64748b' }}>{k}</div><div style={{ fontSize:11,fontWeight:700,color:'#e2e8f0' }}>{v}</div></div>))}</div>
                 <div style={{ fontSize:9,color:'#64748b' }}>Contract: <Chip h={policy.contract_address} /></div>
               </Card>
               <Card>
@@ -516,7 +520,7 @@ export default function DemoPage() {
               </Card>
             )}
 
-            <FSMPath current={(execute?.current_state || execute?.success ? 'EXECUTED' : verify?.contract_state) as CState|undefined} previous={execute?.previous_state || 'TRIGGERED'} />
+            <FSMPath current={fsmCurrent} previous={execute?.previous_state ?? (execute ? 'TRIGGERED' : undefined)} />
 
             {execute&&(
               <Card className="fi cel" style={{ background:(execute.current_state==='FRAUD_REVIEW')?'#1c0a00':(execute.current_state==='REJECTED')?'#2d0a0a':'#052e16',border:`1px solid ${(execute.current_state==='FRAUD_REVIEW')?'#9a3412':(execute.current_state==='REJECTED')?'#7f1d1d':'#166534'}`,marginTop:12,marginBottom:12,animation:execute.current_state==='FRAUD_REVIEW'?'fraudPulse 1.2s ease-in-out infinite':undefined }}>
@@ -538,7 +542,7 @@ export default function DemoPage() {
         {step==='audit'&&(
           <div className="fi">
             <h1 style={{ fontSize:20,fontWeight:800,marginBottom:3,color:'#f1f5f9' }}>{hindi?'🔗 SHA-256 ऑडिट शृंखला':'🔗 Step 4 — Tamper-Evident Audit Chain'}</h1>
-            <p style={{ color:'#64748b',fontSize:12,marginBottom:16 }}>{hindi?'प्रत्येक प्रविष्टि पिछले SHA-256 हैश से जुड़ी — अपरिवर्तनीय':'SHA-256 chained. Every entry links to predecessor — any mutation is instantly detectable.'}</p>
+            <p style={{ color:'#64748b',fontSize:12,marginBottom:16 }}>{hindi?'प्रत्येक प्रविष्टि पिछले SHA-256 हैश से जुड़ी — अपरिवर्तनीय':'SHA-256 chained. Every entry links to predecessor — any mutation is instantly detectable.'}</p>
             {audit&&(<Card style={{ marginBottom:12 }}><div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8 }}><div><div style={{ fontSize:14,fontWeight:800,color:'#e2e8f0' }}>Audit Ledger</div><div style={{ fontSize:11,color:'#64748b' }}>{audit.total_entries} entries · SHA-256</div></div><Badge label={audit.chain_valid?'✓ Chain Valid':'⚠ Chain Broken'} color={audit.chain_valid?'#4ade80':'#f87171'} /></div><div style={{ display:'flex',flexDirection:'column',gap:7 }}>{[...audit.ledger].reverse().map(entry=>(<div key={entry.seq} style={{ border:'1px solid #1e293b',borderRadius:10,padding:'9px 12px',background:entry.event.includes('EXECUTED')?'#052e16':entry.event.includes('TRIGGERED')?'#1c1400':'#0f172a' }}><div style={{ display:'flex',justifyContent:'space-between',marginBottom:4,flexWrap:'wrap',gap:4 }}><div style={{ display:'flex',alignItems:'center',gap:6 }}><span style={{ fontWeight:700,color:'#475569',fontSize:10 }}>#{entry.seq}</span><Badge label={entry.event} color={entry.event.includes('EXECUTED')?'#4ade80':entry.event.includes('TRIGGERED')?'#fbbf24':'#34d399'} /><span style={{ fontSize:10,color:'#475569',fontFamily:'monospace' }}>{entry.policy_id}</span></div><span style={{ fontSize:9,color:'#475569' }}>{entry.ts.slice(0,19).replace('T',' ')} UTC</span></div><div style={{ display:'flex',gap:10,flexWrap:'wrap' }}><div><span style={{ fontSize:9,color:'#475569' }}>HASH </span><Chip h={entry.hash} /></div><div><span style={{ fontSize:9,color:'#475569' }}>PREV </span><Chip h={entry.prev_hash} /></div></div></div>))}</div></Card>)}
             {!audit&&(<div style={{ textAlign:'center',padding:40 }}><button onClick={doAudit} disabled={loading} style={{ background:loading?'#1e293b':'linear-gradient(135deg,#4c1d95,#6d28d9)',color:loading?'#475569':'#ede9fe',border:'none',borderRadius:10,padding:'11px 26px',fontSize:13,fontWeight:700,display:'inline-flex',alignItems:'center',gap:8 }}>{loading&&<Spin/>}🔗 Fetch Audit Chain</button></div>)}
             {audit&&<div style={{ display:'flex',justifyContent:'flex-end' }}><button onClick={doML} disabled={loading} style={{ background:'linear-gradient(135deg,#0c4a6e,#0369a1)',color:'#bae6fd',border:'none',borderRadius:10,padding:'11px 22px',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:7 }}>{loading&&<Spin/>}🤖 ML Predictor →</button></div>}
