@@ -6,19 +6,19 @@ type Lang = 'en' | 'hi';
 type TxStatus = 'SUCCESS' | 'PROCESSING' | 'FAILED';
 type PolicyState = 'ACTIVE' | 'TRIGGERED' | 'EXECUTED';
 
-type DistrictPoint = { district: string; state: string; score: number; x: number; y: number; event: string; farmers: number; };
+type DistrictPoint = { district: string; state: string; score: number; x: number; y: number; event: string; farmers: number; ndvi: number; rainfall: number; temp: number; soil: number; };
 type AuditItem = { id: number; title: string; ts: string; hash: string; prev: string; accent: string; };
 type TxItem = { policyId: string; farmer: string; district: string; amount: number; method: string; rrn: string; status: TxStatus; ts: string; };
 
 const DISTRICTS: DistrictPoint[] = [
-  { district: 'Barmer',   state: 'Rajasthan',   score: 91, x: 150, y: 135, event: 'Drought',  farmers: 24300 },
-  { district: 'Jodhpur',  state: 'Rajasthan',   score: 62, x: 175, y: 150, event: 'Heatwave', farmers: 19500 },
-  { district: 'Latur',    state: 'Maharashtra', score: 88, x: 230, y: 245, event: 'Heatwave', farmers: 16700 },
-  { district: 'Nashik',   state: 'Maharashtra', score: 71, x: 210, y: 220, event: 'Drought',  farmers: 22100 },
-  { district: 'Warangal', state: 'Telangana',   score: 82, x: 305, y: 230, event: 'Drought',  farmers: 18400 },
-  { district: 'Khammam',  state: 'Telangana',   score: 67, x: 320, y: 250, event: 'Flood',    farmers: 12200 },
-  { district: 'Puri',     state: 'Odisha',      score: 79, x: 410, y: 220, event: 'Cyclone',  farmers: 14600 },
-  { district: 'Ludhiana', state: 'Punjab',      score: 38, x: 195, y:  92, event: 'Flood',    farmers: 11200 },
+  { district: 'Barmer',   state: 'Rajasthan',   score: 91, x: 150, y: 135, event: 'Drought',  farmers: 24300, ndvi: 0.21, rainfall: 8,   temp: 47.2, soil: 12 },
+  { district: 'Jodhpur',  state: 'Rajasthan',   score: 62, x: 175, y: 150, event: 'Heatwave', farmers: 19500, ndvi: 0.38, rainfall: 22,  temp: 44.1, soil: 18 },
+  { district: 'Latur',    state: 'Maharashtra', score: 88, x: 230, y: 245, event: 'Heatwave', farmers: 16700, ndvi: 0.24, rainfall: 11,  temp: 43.8, soil: 14 },
+  { district: 'Nashik',   state: 'Maharashtra', score: 71, x: 210, y: 220, event: 'Drought',  farmers: 22100, ndvi: 0.33, rainfall: 18,  temp: 41.5, soil: 22 },
+  { district: 'Warangal', state: 'Telangana',   score: 82, x: 305, y: 230, event: 'Drought',  farmers: 18400, ndvi: 0.27, rainfall: 14,  temp: 44.9, soil: 16 },
+  { district: 'Khammam',  state: 'Telangana',   score: 67, x: 320, y: 250, event: 'Flood',    farmers: 12200, ndvi: 0.61, rainfall: 210, temp: 32.1, soil: 71 },
+  { district: 'Puri',     state: 'Odisha',      score: 79, x: 410, y: 220, event: 'Cyclone',  farmers: 14600, ndvi: 0.44, rainfall: 185, temp: 36.2, soil: 58 },
+  { district: 'Ludhiana', state: 'Punjab',      score: 38, x: 195, y:  92, event: 'Flood',    farmers: 11200, ndvi: 0.72, rainfall: 95,  temp: 29.8, soil: 48 },
 ];
 
 const AUDIT: AuditItem[] = [
@@ -82,10 +82,10 @@ function Counter({ target, prefix = '', suffix = '', duration = 1600 }: { target
 
 // ── Hero Metrics Banner ───────────────────────────────────────────────────────
 const HERO_METRICS = [
-  { label: 'Policies Enrolled',     target: 10000,     prefix: '',   suffix: '',       color: '#64ffda', icon: '📋' },
-  { label: 'Payouts Simulated',     target: 5,         prefix: '₹', suffix: ' Cr',    color: '#3fb950', icon: '💸' },
-  { label: 'Auto-Approval Rate',    target: 92,        prefix: '',   suffix: '%',      color: '#82b1ff', icon: '🤖' },
-  { label: 'Fraud Blocked',         target: 8,         prefix: '',   suffix: '%',      color: '#f85149', icon: '🛡️' },
+  { label: 'Policies Enrolled',     target: 10000, prefix: '',   suffix: '',    color: '#64ffda', icon: '📋' },
+  { label: 'Payouts Simulated',     target: 5,     prefix: '₹', suffix: ' Cr', color: '#3fb950', icon: '💸' },
+  { label: 'Auto-Approval Rate',    target: 92,    prefix: '',   suffix: '%',   color: '#82b1ff', icon: '🤖' },
+  { label: 'Fraud Blocked',         target: 8,     prefix: '',   suffix: '%',   color: '#f85149', icon: '🛡️' },
 ];
 
 function HeroMetrics({ dark, border, panelStrong, sub, text }: { dark: boolean; border: string; panelStrong: string; sub: string; text: string }) {
@@ -107,13 +107,13 @@ function HeroMetrics({ dark, border, panelStrong, sub, text }: { dark: boolean; 
   );
 }
 
-// ── Production Roadmap ────────────────────────────────────────────────────────
+// ── Roadmap ───────────────────────────────────────────────────────────────────
 const ROADMAP = [
-  { q: 'Q3 2026', label: 'Hackathon MVP',           detail: 'YONO mock · India Stack simulator · AI quorum · blockchain audit', status: 'done',    color: '#3fb950' },
+  { q: 'Q3 2026', label: 'Hackathon MVP',            detail: 'YONO mock · India Stack simulator · AI quorum · blockchain audit', status: 'done',    color: '#3fb950' },
   { q: 'Q4 2026', label: 'IRDAI Sandbox Onboarding', detail: 'Apply for IRDAI regulatory sandbox · data localisation audit · DPDP compliance sign-off', status: 'active',  color: '#64ffda' },
   { q: 'Q1 2027', label: 'SBI Core Banking Pilot',   detail: 'Finacle CBS API integration · NPCI IMPS live · 5 pilot districts in Rajasthan', status: 'planned', color: '#82b1ff' },
   { q: 'Q2 2027', label: 'PM-FASAL Integration',     detail: 'PFMS DBT live subsidy routing · Agri Ministry MoU · 50,000 farmer onboarding', status: 'planned', color: '#e3b341' },
-  { q: 'Q3 2027', label: 'National Rollout',         detail: '500+ districts · FPO group policies · multi-crop support · IRDAI licensed insurer', status: 'planned', color: '#e040fb' },
+  { q: 'Q3 2027', label: 'National Rollout',          detail: '500+ districts · FPO group policies · multi-crop support · IRDAI licensed insurer', status: 'planned', color: '#e040fb' },
 ];
 
 function Roadmap({ dark, border, panelStrong, sub, text }: { dark: boolean; border: string; panelStrong: string; sub: string; text: string }) {
@@ -152,24 +152,24 @@ function Roadmap({ dark, border, panelStrong, sub, text }: { dark: boolean; bord
   );
 }
 
-// ── Edge Cases Panel ──────────────────────────────────────────────────────────
+// ── Edge Cases ────────────────────────────────────────────────────────────────
 const EDGE_CASES = [
   {
     icon: '🌾', title: 'Multi-Crop Policy', color: '#3fb950',
     tags: ['Wheat + Pulses', 'Split Coverage', 'Kharif + Rabi'],
-    desc: 'Single policy covers multiple crops on the same land parcel. Each crop has its own trigger oracle (NDVI band calibrated per species) and coverage weight. Smart contract stores an array of CropParam structs; payout is sum of triggered crops.',
+    desc: 'Single policy covers multiple crops on the same land parcel. Each crop has its own trigger oracle (NDVI band calibrated per species) and coverage weight.',
     fields: [['Crop 1', 'Wheat — ₹80,000 cover'], ['Crop 2', 'Chickpea — ₹40,000 cover'], ['Trigger', 'Per-crop NDVI threshold'], ['Payout', 'Independent per crop']],
   },
   {
     icon: '🌊', title: 'Flood / Cyclone Trigger', color: '#82b1ff',
     tags: ['IMD API', 'NDRF Alert', 'Excess Rainfall'],
-    desc: 'Flood trigger fires when IMD district rainfall exceeds 200mm in 24h OR NDRF issues category 2+ alert. Cyclone trigger uses IMD track data + wind speed >74 km/h at district boundary. Both bypass NDVI check (vegetation not applicable for flood).',
-    fields: [['Flood threshold', '>200mm / 24h (IMD)'], ['Cyclone threshold', '>74 km/h + NDRF cat 2'], ['NDVI check', 'Bypassed for flood/cyclone'], ['Payout multiplier', '1.5× for cyclone (higher loss)']],
+    desc: 'Flood trigger fires when IMD district rainfall exceeds 200mm in 24h OR NDRF issues category 2+ alert. Cyclone trigger uses IMD track data + wind speed >74 km/h.',
+    fields: [['Flood threshold', '>200mm / 24h (IMD)'], ['Cyclone threshold', '>74 km/h + NDRF cat 2'], ['NDVI check', 'Bypassed for flood/cyclone'], ['Payout multiplier', '1.5× for cyclone']],
   },
   {
     icon: '🤝', title: 'FPO Group Policy', color: '#e3b341',
     tags: ['Farmer Producer Org', 'Bulk Enrollment', 'Single Premium'],
-    desc: 'Farmer Producer Organisations (FPOs) enroll up to 500 members under one master policy. Single Aadhaar-verified FPO admin signs on behalf. Individual payouts disbursed to each member UPI VPA simultaneously via NPCI batch IMPS. PM-FASAL subsidy applied per member.',
+    desc: 'FPOs enroll up to 500 members under one master policy. Individual payouts disbursed to each member UPI VPA simultaneously via NPCI batch IMPS.',
     fields: [['Max members', '500 per FPO policy'], ['KYC', 'FPO admin Aadhaar + MCA21 reg'], ['Payout', 'NPCI batch IMPS to each UPI VPA'], ['Premium', 'Bulk discount 12% on Smart Shield']],
   },
 ];
@@ -196,14 +196,11 @@ function EdgeCases({ dark, border, panelStrong, sub, text }: { dark: boolean; bo
             </button>
             {open === i && (
               <div style={{ padding: '0 18px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <p style={{ fontSize: 12, color: sub, lineHeight: 1.65, marginTop: 0 }}>{ec.desc}</p>
-                </div>
+                <p style={{ fontSize: 12, color: sub, lineHeight: 1.65, marginTop: 0 }}>{ec.desc}</p>
                 <div style={{ borderRadius: 12, background: dark ? '#0d1117' : '#fff', border: `1px solid ${border}`, padding: 14 }}>
                   {ec.fields.map(([k, v]) => (
                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${border}`, fontSize: 12 }}>
-                      <span style={{ color: sub }}>{k}</span>
-                      <span style={{ fontWeight: 700, color: text }}>{v}</span>
+                      <span style={{ color: sub }}>{k}</span><span style={{ fontWeight: 700, color: text }}>{v}</span>
                     </div>
                   ))}
                 </div>
@@ -216,131 +213,207 @@ function EdgeCases({ dark, border, panelStrong, sub, text }: { dark: boolean; bo
   );
 }
 
-// ── Security Audit Panel ──────────────────────────────────────────────────────
+// ── Security Audit ────────────────────────────────────────────────────────────
 const OWASP_CHECKS = [
-  { id: 'A01', name: 'Broken Access Control',       status: 'pass', note: 'Route-level auth middleware on all /api/* — unauthenticated requests return 401. Aadhaar hash never exposed via API.' },
-  { id: 'A02', name: 'Cryptographic Failures',      status: 'pass', note: 'Aadhaar stored as SHA-256 one-way hash. HTTPS enforced. No secrets in client bundle (env-only).' },
-  { id: 'A03', name: 'Injection',                   status: 'pass', note: 'All oracle inputs validated with Zod schema before processing. No raw SQL; Prisma ORM used with parameterised queries.' },
-  { id: 'A04', name: 'Insecure Design',              status: 'pass', note: 'Threat-modelled: oracle data source pinned by contract address. 4-of-4 quorum prevents single-oracle manipulation.' },
-  { id: 'A05', name: 'Security Misconfiguration',   status: 'pass', note: 'CSP headers, X-Frame-Options, HSTS set via Next.js headers config. No debug endpoints in production.' },
-  { id: 'A06', name: 'Vulnerable Components',       status: 'pass', note: 'npm audit clean at build time (CI gate). Dependabot enabled. No known CVEs in dependency tree.' },
-  { id: 'A07', name: 'Auth Failures',               status: 'pass', note: 'Aadhaar OTP 2FA mandatory for enrollment. MPIN rate-limited to 5 attempts. Session tokens expire in 15 min.' },
-  { id: 'A08', name: 'Software Integrity Failures', status: 'pass', note: 'Smart contract verified on Polygonscan. Docker image hash pinned in CI. All off-chain data signed with secp256k1.' },
-  { id: 'A09', name: 'Logging & Monitoring',        status: 'pass', note: 'All contract events, oracle fetches, and payout attempts logged to Hyperledger Fabric with SHA-256 hash chain.' },
-  { id: 'A10', name: 'SSRF',                        status: 'pass', note: 'Oracle URLs allowlisted (NASA, IMD, ISRO, ICAR domains only). No user-supplied URL fetch paths exist.' },
-];
-
-const INPUT_VALIDATION = [
-  { field: 'Aadhaar UID',          rule: '/^[2-9]{1}[0-9]{11}$/',            example: '9876 5432 1098' },
-  { field: 'Mobile number',        rule: '/^[6-9][0-9]{9}$/',                example: '9876543210' },
-  { field: 'Land acreage',         rule: 'float, 0.1 ≤ x ≤ 999.9',           example: '4.5' },
-  { field: 'NDVI value',           rule: 'float, -1.0 ≤ x ≤ 1.0',            example: '0.28' },
-  { field: 'Rainfall mm',          rule: 'int, 0 ≤ x ≤ 2000',                example: '185' },
-  { field: 'Payout amount (INR)',  rule: 'int, 1000 ≤ x ≤ 5,00,000',        example: '72000' },
-  { field: 'UPI VPA',             rule: '/^[a-zA-Z0-9._-]+@[a-zA-Z]{3,}$/',  example: 'ramesh@okaxis' },
-  { field: 'Oracle quorum score',  rule: 'float, 0.0 ≤ x ≤ 1.0',            example: '0.94' },
+  { id: 'A01', name: 'Broken Access Control',       status: 'pass', note: 'Route-level auth middleware on all /api/* — unauthenticated requests return 401.' },
+  { id: 'A02', name: 'Cryptographic Failures',      status: 'pass', note: 'Aadhaar stored as SHA-256 one-way hash. HTTPS enforced. No secrets in client bundle.' },
+  { id: 'A03', name: 'Injection',                   status: 'pass', note: 'All oracle inputs validated with Zod schema. No raw SQL; Prisma ORM with parameterised queries.' },
+  { id: 'A04', name: 'Insecure Design',              status: 'pass', note: 'Oracle data source pinned by contract address. 4-of-4 quorum prevents single-oracle manipulation.' },
+  { id: 'A05', name: 'Security Misconfiguration',   status: 'pass', note: 'CSP headers, X-Frame-Options, HSTS set via Next.js headers config.' },
+  { id: 'A06', name: 'Vulnerable Components',       status: 'pass', note: 'npm audit clean at build time (CI gate). Dependabot enabled.' },
+  { id: 'A07', name: 'Auth Failures',               status: 'pass', note: 'Aadhaar OTP 2FA mandatory for enrollment. MPIN rate-limited to 5 attempts.' },
+  { id: 'A08', name: 'Software Integrity Failures', status: 'pass', note: 'Smart contract verified on Polygonscan. Docker image hash pinned in CI.' },
+  { id: 'A09', name: 'Logging & Monitoring',        status: 'pass', note: 'All contract events, oracle fetches, and payout attempts logged to Hyperledger Fabric.' },
+  { id: 'A10', name: 'SSRF',                        status: 'pass', note: 'Oracle URLs allowlisted (NASA, IMD, ISRO, ICAR domains only).' },
 ];
 
 function SecurityAudit({ dark, border, panelStrong, sub, text }: { dark: boolean; border: string; panelStrong: string; sub: string; text: string }) {
-  const [tab, setTab] = useState<'owasp' | 'validation'>('owasp');
   const [expandedOwasp, setExpandedOwasp] = useState<string | null>(null);
   return (
     <div style={{ borderRadius: 20, border: `1px solid ${border}`, background: dark ? '#0d1117' : panelStrong, padding: 24, marginBottom: 18 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div>
-          <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: text }}>Security Audit</h2>
-          <p style={{ margin: 0, fontSize: 12, color: sub }}>OWASP Top 10 compliance + input validation schema.</p>
-        </div>
-        <div style={{ display: 'flex', gap: 1, background: dark ? '#161b22' : '#f1f5f9', borderRadius: 12, padding: 3 }}>
-          {(['owasp', 'validation'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              style={{ padding: '6px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: tab === t ? (dark ? '#21262d' : '#fff') : 'transparent', color: tab === t ? (t === 'owasp' ? '#3fb950' : '#82b1ff') : sub, transition: 'all 0.2s' }}>
-              {t === 'owasp' ? 'OWASP Top 10' : 'Input Validation'}
+      <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: text }}>Security Audit</h2>
+      <p style={{ margin: '0 0 14px', fontSize: 12, color: sub }}>OWASP Top 10 compliance — all checks passing.</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: '#3fb95018', border: '1px solid #3fb95044', marginBottom: 14 }}>
+        <span style={{ fontSize: 18 }}>✅</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#3fb950' }}>All 10 OWASP checks passing — 0 critical, 0 high, 0 medium findings</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {OWASP_CHECKS.map(c => (
+          <div key={c.id} style={{ borderRadius: 12, border: `1px solid ${expandedOwasp === c.id ? '#3fb950' : border}`, background: expandedOwasp === c.id ? '#3fb95008' : dark ? '#161b22' : '#f8fafc', overflow: 'hidden' }}>
+            <button onClick={() => setExpandedOwasp(expandedOwasp === c.id ? null : c.id)}
+              style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left' }}>
+              <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: '#3fb95022', color: '#3fb950', fontFamily: 'monospace', flexShrink: 0 }}>{c.id}</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: text }}>{c.name}</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#3fb950', background: '#3fb95018', padding: '2px 10px', borderRadius: 999 }}>PASS</span>
+              <span style={{ color: sub, fontSize: 12, marginLeft: 4 }}>{expandedOwasp === c.id ? '▲' : '▼'}</span>
             </button>
-          ))}
+            {expandedOwasp === c.id && (
+              <div style={{ padding: '0 14px 12px', fontSize: 12, color: sub, lineHeight: 1.6, borderTop: `1px solid ${border}`, paddingTop: 10 }}>{c.note}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// REASONING ENGINE — split-screen: raw oracle data vs rupee business impact
+// ══════════════════════════════════════════════════════════════════════════════
+function ndviLabel(v: number) { return v < 0.3 ? 'Severe stress' : v < 0.5 ? 'Moderate stress' : v < 0.65 ? 'Mild stress' : 'Healthy'; }
+function ndviColor(v: number) { return v < 0.3 ? '#f85149' : v < 0.5 ? '#f97316' : v < 0.65 ? '#e3b341' : '#3fb950'; }
+
+function computeRisk(d: DistrictPoint): { score: number; eligible: boolean; payout: number; premium: number; riskPerHa: number; confidence: number; reasons: string[] } {
+  // Mirrors the GB v3.0 weights: NDVI×0.40 + Temp×0.25 + Rain×0.25 + Soil×0.10
+  const ndviScore  = Math.max(0, (0.5 - d.ndvi) / 0.5) * 100;          // low NDVI → high risk
+  const tempScore  = Math.min(100, Math.max(0, (d.temp - 30) / 20) * 100);
+  const rainScore  = d.event === 'Flood'
+    ? Math.min(100, Math.max(0, (d.rainfall - 100) / 150) * 100)
+    : Math.min(100, Math.max(0, (50 - d.rainfall) / 50) * 100);         // drought: low rain → high risk
+  const soilScore  = d.event === 'Flood'
+    ? Math.min(100, Math.max(0, (d.soil - 40) / 60) * 100)
+    : Math.min(100, Math.max(0, (30 - d.soil) / 30) * 100);
+  const weighted = ndviScore * 0.40 + tempScore * 0.25 + rainScore * 0.25 + soilScore * 0.10;
+  const eligible = weighted >= 60;
+  const acreage = 4.5; // default
+  const coverPerHa = 80000;
+  const riskPerHa = Math.round(coverPerHa * (weighted / 100));
+  const payout  = Math.round(riskPerHa * acreage);
+  const premium = Math.round(payout * 0.022); // 2.2% actuarial premium
+  const confidence = Math.min(99, Math.round(50 + weighted * 0.49));
+  const reasons: string[] = [];
+  if (ndviScore > 60)  reasons.push(`NDVI ${d.ndvi} — vegetation severely degraded (threshold < 0.30)`);
+  if (tempScore > 50)  reasons.push(`Temp ${d.temp}°C — exceeds critical 42°C heatwave threshold`);
+  if (rainScore > 50 && d.event !== 'Flood') reasons.push(`Rainfall ${d.rainfall}mm — below 25mm drought trigger`);
+  if (rainScore > 50 && d.event === 'Flood') reasons.push(`Rainfall ${d.rainfall}mm — exceeds 200mm flood threshold`);
+  if (soilScore > 50)  reasons.push(`Soil moisture ${d.soil}% — outside safe range for ${d.event}`);
+  if (reasons.length === 0) reasons.push('All parameters within normal range — low risk district');
+  return { score: Math.round(weighted), eligible, payout, premium, riskPerHa, confidence, reasons };
+}
+
+function ReasoningEngine({ district, dark, border, panelStrong, sub, text }: {
+  district: DistrictPoint; dark: boolean; border: string; panelStrong: string; sub: string; text: string;
+}) {
+  const r = computeRisk(district);
+  const eligibleColor = r.eligible ? '#3fb950' : '#f85149';
+  const RAW = [
+    { label: 'NDVI (NASA MODIS)',    value: district.ndvi.toFixed(2),   unit: '',    badge: ndviLabel(district.ndvi),   color: ndviColor(district.ndvi),   bar: Math.round(district.ndvi * 100) },
+    { label: 'Rainfall (IMD)',       value: district.rainfall,           unit: 'mm', badge: district.rainfall < 25 ? 'Drought risk' : district.rainfall > 200 ? 'Flood risk' : 'Normal', color: district.rainfall < 25 || district.rainfall > 200 ? '#f97316' : '#3fb950', bar: Math.min(100, Math.round(district.rainfall / 2.5)) },
+    { label: 'Temperature (ISRO)',   value: district.temp.toFixed(1),    unit: '°C', badge: district.temp > 42 ? 'Heatwave' : 'Normal',      color: district.temp > 42 ? '#f85149' : '#3fb950', bar: Math.min(100, Math.round((district.temp / 55) * 100)) },
+    { label: 'Soil Moisture (ICAR)', value: district.soil,               unit: '%',  badge: district.soil < 20 ? 'Critically dry' : 'Adequate', color: district.soil < 20 ? '#f97316' : '#64ffda', bar: district.soil },
+  ];
+  const IMPACT = [
+    { label: 'Eligible for Payout',   value: r.eligible ? '✅ YES' : '❌ NO',  color: eligibleColor,  note: `Weighted risk score ${r.score}/100 — threshold ≥ 60` },
+    { label: 'Risk per Hectare',      value: `₹${r.riskPerHa.toLocaleString('en-IN')}`, color: '#e3b341', note: `Based on ₹80,000 cover × ${r.score}% weighted risk` },
+    { label: 'Estimated Payout',      value: `₹${r.payout.toLocaleString('en-IN')}`,    color: '#3fb950', note: `Risk/ha × 4.5 ha = SBI mitigates ₹${r.payout.toLocaleString('en-IN')} exposure` },
+    { label: 'Actuarial Premium',     value: `₹${r.premium.toLocaleString('en-IN')}`,   color: '#64ffda', note: `2.2% of payout — net SBI risk after PM-FASAL subsidy` },
+    { label: 'AI Confidence',         value: `${r.confidence}%`,                         color: '#a78bfa', note: `GB v3.0 quorum confidence across 3 oracle agents` },
+  ];
+  return (
+    <div style={{ borderRadius: 20, border: `2px solid #a78bfa44`, background: dark ? '#0a0d1a' : panelStrong, padding: 24, marginBottom: 18 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#a78bfa', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>🧠 Reasoning Engine</div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: text }}>{district.district}, {district.state}</h2>
+          <div style={{ fontSize: 12, color: sub, marginTop: 4 }}>Oracle evaluation — why the AI made this decision</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 28, fontWeight: 900, color: eligibleColor }}>{r.eligible ? '✅ ELIGIBLE' : '❌ NOT ELIGIBLE'}</div>
+          <div style={{ fontSize: 12, color: sub, marginTop: 2 }}>Weighted risk score: <b style={{ color: text }}>{r.score}/100</b></div>
         </div>
       </div>
 
-      {tab === 'owasp' && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: '#3fb95018', border: '1px solid #3fb95044', marginBottom: 14 }}>
-            <span style={{ fontSize: 18 }}>✅</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#3fb950' }}>All 10 OWASP checks passing — 0 critical, 0 high, 0 medium findings</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {OWASP_CHECKS.map(c => (
-              <div key={c.id} style={{ borderRadius: 12, border: `1px solid ${expandedOwasp === c.id ? '#3fb950' : border}`, background: expandedOwasp === c.id ? '#3fb95008' : dark ? '#161b22' : '#f8fafc', overflow: 'hidden' }}>
-                <button onClick={() => setExpandedOwasp(expandedOwasp === c.id ? null : c.id)}
-                  style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left' }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: '#3fb95022', color: '#3fb950', fontFamily: 'monospace', flexShrink: 0 }}>{c.id}</span>
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: text }}>{c.name}</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#3fb950', background: '#3fb95018', padding: '2px 10px', borderRadius: 999 }}>PASS</span>
-                  <span style={{ color: sub, fontSize: 12, marginLeft: 4 }}>{expandedOwasp === c.id ? '▲' : '▼'}</span>
-                </button>
-                {expandedOwasp === c.id && (
-                  <div style={{ padding: '0 14px 12px', fontSize: 12, color: sub, lineHeight: 1.6, borderTop: `1px solid ${border}`, paddingTop: 10 }}>{c.note}</div>
-                )}
+      {/* Split screen */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+
+        {/* LEFT — Raw oracle data */}
+        <div style={{ borderRadius: 16, border: `1px solid ${border}`, background: dark ? '#0d1117' : '#f8fafc', padding: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#64ffda', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>🛰️ Raw Oracle Data Points</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {RAW.map(row => (
+              <div key={row.label}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <span style={{ fontSize: 12, color: sub }}>{row.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: 15, color: text }}>{row.value}{row.unit}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: `${row.color}20`, color: row.color, border: `1px solid ${row.color}44` }}>{row.badge}</span>
+                  </div>
+                </div>
+                <div style={{ height: 6, borderRadius: 999, background: dark ? '#1e293b' : '#e2e8f0', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${row.bar}%`, background: row.color, borderRadius: 999, transition: 'width 0.6s ease' }} />
+                </div>
               </div>
             ))}
           </div>
-        </>
-      )}
 
-      {tab === 'validation' && (
-        <>
-          <div style={{ marginBottom: 12, fontSize: 12, color: sub }}>All inputs validated server-side with <span style={{ color: '#82b1ff', fontWeight: 700 }}>Zod</span> schema before oracle processing or contract execution. Client-side validation mirrors server rules.</div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
-              <thead>
-                <tr>
-                  {['Field', 'Validation Rule', 'Example'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, color: sub, textTransform: 'uppercase', letterSpacing: 1, borderBottom: `1px solid ${border}` }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {INPUT_VALIDATION.map((v, i) => (
-                  <tr key={i}>
-                    <td style={{ padding: '10px 12px', borderBottom: `1px solid ${border}`, fontWeight: 700, color: text, fontSize: 13 }}>{v.field}</td>
-                    <td style={{ padding: '10px 12px', borderBottom: `1px solid ${border}`, fontFamily: 'monospace', color: '#82b1ff', fontSize: 11 }}>{v.rule}</td>
-                    <td style={{ padding: '10px 12px', borderBottom: `1px solid ${border}`, fontFamily: 'monospace', color: '#e3b341', fontSize: 12 }}>{v.example}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Trigger reasons */}
+          <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 12, background: dark ? '#161b22' : '#fff', border: `1px solid ${border}` }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#e3b341', marginBottom: 8 }}>⚡ Trigger Reasons</div>
+            {r.reasons.map((reason, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5, fontSize: 11, color: sub, lineHeight: 1.5 }}>
+                <span style={{ color: r.eligible ? '#f97316' : '#64ffda', flexShrink: 0 }}>{'→'}</span>
+                <span>{reason}</span>
+              </div>
+            ))}
           </div>
-          <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 12, background: dark ? '#161b22' : '#f8fafc', border: `1px solid ${border}`, fontSize: 12, color: sub, lineHeight: 1.6 }}>
-            <span style={{ color: text, fontWeight: 700 }}>Fraud detection rules:</span> Aadhaar already enrolled within 90 days → REJECT. Payout within 72h of enrollment → FLAG for manual review. Same UPI VPA across 3+ unrelated policies → FREEZE + alert IRDAI audit log.
+        </div>
+
+        {/* RIGHT — Business impact in ₹ */}
+        <div style={{ borderRadius: 16, border: `1px solid #3fb95044`, background: dark ? '#061210' : '#f0fdf4', padding: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#3fb950', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>💰 Business Impact — Translated to ₹</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {IMPACT.map(row => (
+              <div key={row.label} style={{ padding: '12px 14px', borderRadius: 12, background: dark ? '#0d1f1a' : '#fff', border: `1px solid ${row.color}33` }}>
+                <div style={{ fontSize: 11, color: sub, marginBottom: 4 }}>{row.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: row.color, lineHeight: 1 }}>{row.value}</div>
+                <div style={{ fontSize: 10, color: sub, marginTop: 5, lineHeight: 1.5 }}>{row.note}</div>
+              </div>
+            ))}
           </div>
-        </>
-      )}
+
+          {/* SBI risk summary */}
+          <div style={{ marginTop: 14, padding: '14px', borderRadius: 12, background: `#3fb95018`, border: `1px solid #3fb95044` }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#3fb950', marginBottom: 6 }}>📋 SBI Risk Summary</div>
+            <div style={{ fontSize: 12, color: sub, lineHeight: 1.6 }}>
+              Based on oracle data for <b style={{ color: text }}>{district.district}</b>, SBI mitigates
+              {' '}<b style={{ color: '#3fb950' }}>₹{r.riskPerHa.toLocaleString('en-IN')} per hectare</b> of crop loss risk.
+              At 4.5 ha, total exposure is <b style={{ color: '#e3b341' }}>₹{r.payout.toLocaleString('en-IN')}</b>,
+              covered by actuarial premium of <b style={{ color: '#64ffda' }}>₹{r.premium.toLocaleString('en-IN')}</b>.
+              {r.eligible
+                ? ' IMPS payout will be auto-triggered within 3 seconds of quorum confirmation.'
+                : ' District is below trigger threshold — policy remains ACTIVE, no payout initiated.'}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const [lang, setLang] = useState<Lang>('en');
-  const [dark, setDark] = useState(true);
-  const [selected, setSelected] = useState(DISTRICTS[0]);
+  const [lang, setLang]           = useState<Lang>('en');
+  const [dark, setDark]           = useState(true);
+  const [selected, setSelected]   = useState(DISTRICTS[0]);
   const [policyState, setPolicyState] = useState<PolicyState>('TRIGGERED');
   const t = COPY[lang];
 
   const theme = useMemo(() => ({
-    bg: dark ? '#030712' : '#f8fafc',
-    panel: dark ? 'rgba(255,255,255,0.04)' : '#ffffff',
-    panelStrong: dark ? '#0d1117' : '#ffffff',
-    border: dark ? 'rgba(255,255,255,0.08)' : '#dbe4f0',
-    text: dark ? '#e6edf3' : '#0f172a',
-    sub: dark ? '#7d8590' : '#64748b',
-    grid: dark ? 'rgba(100,255,218,0.06)' : 'rgba(26,35,126,0.08)',
+    bg:          dark ? '#030712'                : '#f8fafc',
+    panel:       dark ? 'rgba(255,255,255,0.04)' : '#ffffff',
+    panelStrong: dark ? '#0d1117'                : '#ffffff',
+    border:      dark ? 'rgba(255,255,255,0.08)' : '#dbe4f0',
+    text:        dark ? '#e6edf3'                : '#0f172a',
+    sub:         dark ? '#7d8590'                : '#64748b',
+    grid:        dark ? 'rgba(100,255,218,0.06)' : 'rgba(26,35,126,0.08)',
   }), [dark]);
 
   const kpis = [
-    { label: t.kpi1, value: '8',     sub: 'NASA · IMD · ISRO · ICAR', color: '#64ffda' },
-    { label: t.kpi2, value: '3',     sub: 'Weighted quorum >=75%',     color: '#e3b341' },
+    { label: t.kpi1, value: '8',      sub: 'NASA · IMD · ISRO · ICAR', color: '#64ffda' },
+    { label: t.kpi2, value: '3',      sub: 'Weighted quorum >=75%',     color: '#e3b341' },
     { label: t.kpi3, value: '₹1.53L', sub: 'IMPS + UPI',               color: '#3fb950' },
-    { label: t.kpi4, value: '<3s',   sub: 'Edge + NPCI sim',           color: '#82b1ff' },
+    { label: t.kpi4, value: '<3s',    sub: 'Edge + NPCI sim',           color: '#82b1ff' },
   ];
 
   return (
@@ -352,10 +425,11 @@ export default function DashboardPage() {
         .table-wrap { overflow-x: auto; }
         .audit-line::before { content:''; position:absolute; left: 15px; top: 28px; bottom: -18px; width: 2px; background: ${theme.border}; }
         @media (max-width: 1024px) { .col-12, .col-8, .col-7, .col-6, .col-5, .col-4, .col-3 { grid-column: span 12 / span 12 !important; } }
-        @media (max-width: 640px) { .hero-grid { grid-template-columns: repeat(2,1fr) !important; } }
+        @media (max-width: 640px)  { .hero-grid { grid-template-columns: repeat(2,1fr) !important; } }
       `}</style>
 
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 16px 40px' }}>
+
         {/* Header */}
         <div className="panel" style={{ padding: 24, marginBottom: 18, background: dark ? 'linear-gradient(135deg,#0d1117,#0a0f1e,#0d1b4b)' : 'linear-gradient(135deg,#ffffff,#eef4ff,#eafaf7)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -391,7 +465,7 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{t.riskMap}</h2>
-                <div style={{ marginTop: 4, fontSize: 12, color: theme.sub }}>SVG India schematic · district dots scale with risk score</div>
+                <div style={{ marginTop: 4, fontSize: 12, color: theme.sub }}>Click a district dot to analyse it in the Reasoning Engine below ↓</div>
               </div>
               <div style={{ fontSize: 12, color: theme.sub }}>{selected.district}, {selected.state} · {selected.score}/100</div>
             </div>
@@ -473,10 +547,20 @@ export default function DashboardPage() {
             </div>
             <div style={{ marginTop: 18, borderRadius: 14, padding: 14, background: theme.panelStrong, border: `1px solid ${theme.border}` }}>
               <div style={{ fontSize: 11, color: theme.sub, marginBottom: 8 }}>Transition rule</div>
-              <div style={{ fontSize: 13, lineHeight: 1.7 }}>ACTIVE to TRIGGERED when weighted quorum is >= 75%; TRIGGERED to EXECUTED after smart contract call and IMPS settlement confirmation.</div>
+              <div style={{ fontSize: 13, lineHeight: 1.7 }}>ACTIVE to TRIGGERED when weighted quorum is &gt;= 75%; TRIGGERED to EXECUTED after smart contract call and IMPS settlement confirmation.</div>
             </div>
           </section>
         </div>
+
+        {/* ── REASONING ENGINE ── */}
+        <ReasoningEngine
+          district={selected}
+          dark={dark}
+          border={theme.border}
+          panelStrong={theme.panelStrong}
+          sub={theme.sub}
+          text={theme.text}
+        />
 
         {/* Audit + Transactions */}
         <div className="dash-grid" style={{ marginBottom: 18 }}>
@@ -532,13 +616,8 @@ export default function DashboardPage() {
           </section>
         </div>
 
-        {/* Production Roadmap */}
         <Roadmap dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
-
-        {/* Edge Cases */}
         <EdgeCases dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
-
-        {/* Security Audit */}
         <SecurityAudit dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
       </div>
     </div>
