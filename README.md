@@ -1,7 +1,7 @@
 # 🌾 YONO-Oracle IIE — Intelligent Insurance Engine
 
-[![Deploy Status](https://img.shields.io/badge/Vercel-Live-brightgreen?logo=vercel&logoColor=white)](https://iie-web.vercel.app)
-[![Health](https://img.shields.io/badge/API%20Health-ok-3fb950?logo=statuspal)](https://iie-web.vercel.app/api/health)
+[![Deploy Status](https://img.shields.io/badge/Vercel-Live-brightgreen?logo=vercel&logoColor=white)](https://yono-iie-web.vercel.app)
+[![Health](https://img.shields.io/badge/API%20Health-ok-3fb950?logo=statuspal)](https://yono-iie-web.vercel.app/api/health)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black?logo=nextdotjs)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178c6?logo=typescript)](https://www.typescriptlang.org)
 [![Edge Runtime](https://img.shields.io/badge/Runtime-Vercel%20Edge-purple?logo=vercel)](https://vercel.com/docs/functions/edge-functions)
@@ -15,11 +15,16 @@
 
 | Endpoint | URL |
 |----------|-----|
-| 🌐 **Frontend** | https://iie-web.vercel.app |
-| ⚡ **Demo Flow** | https://iie-web.vercel.app/demo |
-| 📊 **Dashboard** | https://iie-web.vercel.app/dashboard |
-| 🔗 **Blockchain Audit** | https://iie-web.vercel.app/blockchain |
-| 🏗️ **Architecture** | https://iie-web.vercel.app/architecture |
+| 🌐 **Frontend** | https://yono-iie-web.vercel.app |
+| ⚡ **Demo Flow** | https://yono-iie-web.vercel.app/demo |
+| 🗺️ **Dashboard** | https://yono-iie-web.vercel.app/dashboard |
+| 🔗 **Blockchain Audit** | https://yono-iie-web.vercel.app/blockchain |
+| 🏗️ **Architecture** | https://yono-iie-web.vercel.app/architecture |
+| 🛰️ **Oracle Feed** | https://yono-iie-web.vercel.app/risk |
+| 💸 **Payout Tracker** | https://yono-iie-web.vercel.app/payouts |
+| 🤖 **Agent Quorum** | https://yono-iie-web.vercel.app/agents |
+| 📊 **Impact Metrics** | https://yono-iie-web.vercel.app/impact |
+| 🇮🇳 **India Stack** | https://yono-iie-web.vercel.app/india-stack |
 
 ---
 
@@ -29,23 +34,28 @@ All endpoints are publicly accessible. Use header `X-Judge-Key: gff2026` for pri
 
 ```bash
 # Health check
-curl https://iie-web.vercel.app/api/health
+curl https://yono-iie-web.vercel.app/api/health
 
 # Enroll a farmer
-curl -X POST https://iie-web.vercel.app/api/oracle/enroll \
+curl -X POST https://yono-iie-web.vercel.app/api/oracle/enroll \
   -H 'Content-Type: application/json' \
   -d '{"name":"Ramesh Kumar","aadhaar_last4":"4821","district":"Barmer","state":"Rajasthan","crop":"wheat","acreage":4.5,"plan":"Smart Shield"}'
 
 # Verify + run oracle quorum
-curl -X POST https://iie-web.vercel.app/api/oracle/verify \
+curl -X POST https://yono-iie-web.vercel.app/api/oracle/verify \
   -H 'Content-Type: application/json' \
   -d '{"policy_id":"SBI-IIE-00341","event_type":"drought","district":"Barmer","crop":"wheat","acreage":4.5}'
 
+# Execute smart contract
+curl -X POST https://yono-iie-web.vercel.app/api/contract/execute \
+  -H 'Content-Type: application/json' \
+  -d '{"policy_id":"SBI-IIE-00341","farmer_name":"Ramesh Kumar","payout_amount":45000}'
+
 # Audit trail
-curl https://iie-web.vercel.app/api/audit/trail
+curl https://yono-iie-web.vercel.app/api/audit/trail
 
 # ML risk prediction
-curl -X POST https://iie-web.vercel.app/api/ml/predict \
+curl -X POST https://yono-iie-web.vercel.app/api/ml/predict \
   -H 'Content-Type: application/json' \
   -d '{"district":"Barmer","ndvi":0.21,"temp_c":47.2,"rainfall_mm":8,"soil_moisture_pct":12}'
 ```
@@ -91,7 +101,7 @@ curl -X POST https://iie-web.vercel.app/api/ml/predict \
 | Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS |
 | Backend | Vercel Edge Functions (TypeScript) |
 | Oracle | NASA MODIS NDVI, IMD Rainfall, ISRO Bhuvan, ICAR Sensors |
-| AI/ML | NaiveBayes LLR + Sigmoid (NDVI×0.4 + Temp×0.25 + Rain×0.25 + Soil×0.1) |
+| AI/ML | GradientBoosting v3.0 + NaiveBayes LLR |
 | Blockchain | Polygon Mumbai (Solidity 0.8.19) + Hyperledger Fabric |
 | Audit | SHA-256 chained ledger |
 | Payments | UPI/IMPS via NPCI (simulated) |
@@ -117,14 +127,18 @@ npm run dev
 |-------|-------------|
 | `/` | Hero — pipeline animation, live stats |
 | `/demo` | 5-step interactive demo flow |
-| `/dashboard` | Risk map, FSM state, audit timeline, transactions |
+| `/agents` | AI agent quorum voting panel |
+| `/dashboard` | Risk map, FSM state, audit timeline |
 | `/risk` | District risk table with ML scores |
 | `/payouts` | Live payout tracker |
 | `/impact` | IIE vs PMFBY comparison |
-| `/blockchain` | Smart contracts, oracle network, Solidity code |
+| `/blockchain` | Smart contracts + Solidity code |
 | `/enroll` | Farmer enrollment flow |
 | `/india-stack` | India Stack DPI layers |
 | `/architecture` | System architecture + roadmap |
+| `/ml` | ML model panel |
+| `/pitch` | Pitch deck |
+| `/team` | Team page |
 
 ---
 
