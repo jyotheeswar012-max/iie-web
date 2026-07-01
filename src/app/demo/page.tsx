@@ -24,13 +24,11 @@ interface ExecuteResult {
 }
 interface AuditEntry { seq:number; ts:string; event:string; policy_id:string; hash:string; prev_hash:string; data:Record<string,unknown>; }
 
-// Matches the adapted shape produced by doML (normalised from /api/ml/predict)
 interface MLResult {
   risk_score:number; risk_level:string; triggered:boolean; confidence_pct:number;
   log_likelihoods:Record<string,{llr:number;weight:string;label:string}>;
   total_llr:number; flags:string[]; model:string; recommendation:string;
 }
-// Matches the adapted shape produced by doML (normalised from /api/ml/train)
 interface TrainMetrics {
   version:string; algorithm:string;
   metrics:{ accuracy:number; precision:number; recall:number; f1:number; auc:number; train_rows:number; val_rows:number; feature_count:number; };
@@ -160,7 +158,7 @@ function TrainPanel({ train }:{ train:TrainMetrics }) {
         </div>
       </div>
       <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:7 }} className="g4">
-        {[
+        {([
           ['Accuracy',`${(m.accuracy*100).toFixed(1)}%`,'#4ade80'],
           ['Precision',`${(m.precision*100).toFixed(1)}%`,'#38bdf8'],
           ['Recall',`${(m.recall*100).toFixed(1)}%`,'#fbbf24'],
@@ -169,10 +167,10 @@ function TrainPanel({ train }:{ train:TrainMetrics }) {
           ['Val Rows',String(m.val_rows),'#94a3b8'],
           ['Features',String(m.feature_count),'#94a3b8'],
           ['F1',`${(m.f1*100).toFixed(1)}%`,'#f87171'],
-        ].map(([k,v,c])=>(
-          <div key={k as string} style={{ background:'#030712',border:'1px solid #1e293b',borderRadius:8,padding:'8px 9px' }}>
-            <div style={{ fontSize:9,color:'#475569',marginBottom:2 }}>{k as string}</div>
-            <div style={{ fontSize:13,fontWeight:800,color:c as string }}>{v as string}</div>
+        ] as [string,string,string][]).map(([k,v,c])=>(
+          <div key={k} style={{ background:'#030712',border:'1px solid #1e293b',borderRadius:8,padding:'8px 9px' }}>
+            <div style={{ fontSize:9,color:'#475569',marginBottom:2 }}>{k}</div>
+            <div style={{ fontSize:13,fontWeight:800,color:c }}>{v}</div>
           </div>
         ))}
       </div>
@@ -294,7 +292,7 @@ export default function DemoPage() {
   useEffect(() => { ping(); }, [ping]);
 
   const startTimer = () => { setElapsed(0); timerRef.current = setInterval(()=>setElapsed(e=>e+1), 100); };
-  const stopTimer = () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current=null; } };
+  const stopTimer  = () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current=null; } };
 
   const post = async (url:string, body:object) => {
     const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
@@ -324,6 +322,7 @@ export default function DemoPage() {
     catch(e:unknown) { setError(e instanceof Error?e.message:'Error'); }
     stopTimer(); setLoading(false);
   };
+
   const doVerify = async () => {
     if (!policy) return;
     setLoading(true); setError(''); startTimer();
@@ -331,6 +330,7 @@ export default function DemoPage() {
     catch(e:unknown) { setError(e instanceof Error?e.message:'Error'); }
     stopTimer(); setLoading(false);
   };
+
   const doExecute = async () => {
     if (!policy) return;
     setLoading(true); setError(''); startTimer();
@@ -340,6 +340,7 @@ export default function DemoPage() {
     } catch(e:unknown) { setError(e instanceof Error?e.message:'Error'); }
     stopTimer(); setLoading(false);
   };
+
   const doAudit = async () => {
     setLoading(true); setError(''); startTimer();
     try { const r = await fetch('/api/audit/trail'); setAudit(await r.json()); setStep('ml'); }
@@ -347,15 +348,16 @@ export default function DemoPage() {
     stopTimer(); setLoading(false);
   };
 
-  // ── doML: adapts /api/ml/predict + /api/ml/train raw responses into UI shapes ──
+  // ── doML: flat brace structure — avoids SWC miscount of nested if+try+try ──
   const doML = async () => {
     setLoading(true); setError(''); startTimer();
     try {
-      // 1. Fetch oracle feed for real-time sensor values
-      const fd = await (await fetch('/api/oracle/feed')).json();
-      const row = fd.districts?.[0];
+      // 1. Oracle feed
+      const fd   = await (await fetch('/api/oracle/feed')).json();
+      const row  = fd.districts?.[0];
+
+      // 2. Predict — only if we have a sensor row
       if (row) {
-        // 2. Call predict API
         const pred = await post('/api/ml/predict', {
           district:          row.district,
           ndvi:              row.ndvi,
@@ -364,77 +366,62 @@ export default function DemoPage() {
           soil_moisture_pct: row.soil_moisture,
         });
 
-        // 3. Adapt predict response → MLResult
-        // /api/ml/predict returns: { contributions: Record<feat,{raw_contrib,pct_contrib,direction,importance,value}>,
-        //   risk_score, risk_level, triggered, probability, raw_score, flags, recommendation, model:{name,version,...} }
-        const contributions: Record<string,{raw_contrib:number;pct_contrib:number;direction:string;importance:number}> =
-          pred.contributions ?? {};
-
-        // Map each contribution entry → log_likelihood entry the UI renders
+        // 3. Adapt predict → MLResult
+        type RawContrib = { raw_contrib:number; pct_contrib:number; direction:string; importance:number };
+        const contributions = (pred.contributions ?? {}) as Record<string, RawContrib>;
         const log_likelihoods: Record<string,{llr:number;weight:string;label:string}> = {};
         for (const [feat, c] of Object.entries(contributions)) {
-          const contrib = c as {raw_contrib:number;pct_contrib:number;direction:string;importance:number};
           log_likelihoods[feat] = {
-            llr:    +contrib.raw_contrib.toFixed(3),
-            weight: `${(contrib.importance * 100).toFixed(1)}%`,
-            label:  contrib.direction ?? (contrib.raw_contrib > 0 ? 'risk↑' : 'risk↓'),
+            llr:    +c.raw_contrib.toFixed(3),
+            weight: `${(c.importance * 100).toFixed(1)}%`,
+            label:  c.direction ?? (c.raw_contrib > 0 ? 'risk↑' : 'risk↓'),
           };
         }
-
-        const total_llr = +(pred.raw_score ?? 0).toFixed(3);
+        const total_llr      = +(pred.raw_score ?? 0).toFixed(3);
         const confidence_pct = +((pred.probability ?? pred.risk_score / 100) * 100).toFixed(1);
-
-        // Flatten nested model object → readable string
-        const modelObj = pred.model ?? {};
-        const modelStr = modelObj.name
+        const modelObj       = pred.model ?? {};
+        const modelStr: string = modelObj.name
           ? `${modelObj.name} v${modelObj.version} · ${modelObj.rounds} rounds · AUC ${modelObj.roc_auc}`
           : String(modelObj);
 
-        const adapted: MLResult = {
-          risk_score:      pred.risk_score,
-          risk_level:      pred.risk_level,
-          triggered:       pred.triggered,
+        setMl({
+          risk_score:     pred.risk_score,
+          risk_level:     pred.risk_level,
+          triggered:      pred.triggered,
           confidence_pct,
           log_likelihoods,
           total_llr,
-          flags:           pred.flags ?? [],
-          model:           modelStr,
-          recommendation:  pred.recommendation ?? '',
-        };
-        setMl(adapted);
+          flags:          pred.flags ?? [],
+          model:          modelStr,
+          recommendation: pred.recommendation ?? '',
+        });
       }
 
-      // 4. Fetch train API and adapt → TrainMetrics
-      try {
-        const td = await (await fetch('/api/ml/train')).json();
-        // /api/ml/train returns: { model, version(in config), final_metrics:{GradientBoosting:{precision,recall,f1_score,roc_auc,accuracy,log_loss}},
-        //   feature_importances:[{feature,importance,...}], dataset:{train_samples,test_samples}, confusion_matrix:{tp,fp,fn,tn}, config:{n_features} }
-        const gb = td.final_metrics?.GradientBoosting ?? {};
-        const ds = td.dataset ?? {};
-        const cm = td.confusion_matrix ?? null;
-
-        const adaptedTrain: TrainMetrics = {
-          version:   td.config?.best_round ? `v3.0 (round ${td.config.best_round})` : 'v3.0.0',
-          algorithm: td.model ?? 'GradientBoostingClassifier',
+      // 4. Train metrics — non-critical, swallow errors
+      const tdRaw = await fetch('/api/ml/train').then(r => r.json()).catch(() => null);
+      if (tdRaw) {
+        const gb = tdRaw.final_metrics?.GradientBoosting ?? {};
+        const ds = tdRaw.dataset ?? {};
+        const cm = tdRaw.confusion_matrix ?? null;
+        setTrain({
+          version:   tdRaw.config?.best_round ? `v3.0 (round ${tdRaw.config.best_round})` : 'v3.0.0',
+          algorithm: tdRaw.model ?? 'GradientBoostingClassifier',
           metrics: {
-            accuracy:      gb.accuracy    ?? 0,
-            precision:     gb.precision   ?? 0,
-            recall:        gb.recall      ?? 0,
-            f1:            gb.f1_score    ?? 0,
-            auc:           gb.roc_auc     ?? 0,
+            accuracy:      gb.accuracy      ?? 0,
+            precision:     gb.precision     ?? 0,
+            recall:        gb.recall        ?? 0,
+            f1:            gb.f1_score      ?? 0,
+            auc:           gb.roc_auc       ?? 0,
             train_rows:    ds.train_samples ?? 0,
             val_rows:      ds.test_samples  ?? 0,
-            feature_count: td.config?.n_features ?? 6,
+            feature_count: tdRaw.config?.n_features ?? 6,
           },
-          // API uses feature_importances (plural) — map to feature_importance (singular) for UI
-          feature_importance: (td.feature_importances ?? []).map(
-            (f: {feature:string;importance:number}) => ({ feature: f.feature, importance: f.importance })
-          ),
-          confusion_matrix: cm ? { tp: cm.tp, fp: cm.fp, tn: cm.tn, fn: cm.fn } : undefined,
-        };
-        setTrain(adaptedTrain);
-      } catch { /* train panel is non-critical */ }
-    } catch(e:unknown) { setError(e instanceof Error?e.message:'Error'); }
+          feature_importance: ((tdRaw.feature_importances ?? []) as {feature:string;importance:number}[])
+            .map(f => ({ feature: f.feature, importance: f.importance })),
+          confusion_matrix: cm ? { tp:cm.tp, fp:cm.fp, tn:cm.tn, fn:cm.fn } : undefined,
+        });
+      }
+    } catch(e:unknown) { setError(e instanceof Error ? e.message : 'Error'); }
     stopTimer(); setLoading(false);
   };
 
