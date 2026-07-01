@@ -334,6 +334,12 @@ export default function DemoPage() {
   }, []);
   useEffect(() => { ping(); }, [ping]);
 
+  // Null-guard: if we land on 'verify' or 'execute' without a policy (e.g. hard
+  // refresh mid-flow or ?offline boot race), snap back to enroll before render crash.
+  useEffect(() => {
+    if ((step === 'verify' || step === 'execute') && !policy) setStep('enroll');
+  }, [step, policy]);
+
   const startTimer = () => { setElapsed(0); timerRef.current = setInterval(()=>setElapsed(e=>e+1), 100); };
   const stopTimer  = () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current=null; } };
 
