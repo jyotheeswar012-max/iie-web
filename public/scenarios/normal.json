@@ -1,0 +1,23 @@
+{
+  "scenario": "normal",
+  "district": "Ludhiana",
+  "state": "Punjab",
+  "event": "Flood",
+  "cachedAt": "2026-06-30T09:40:00Z",
+  "source": "cache",
+  "cacheReason": "Pre-validated baseline — live data delayed",
+  "oracle": {
+    "ndvi":     { "value": 0.72, "source": "NASA MODIS MYD13A1", "date": "2026-06-29", "label": "Healthy" },
+    "rainfall": { "value": 95,   "unit": "mm",  "source": "IMD District Rainfall API", "date": "2026-06-29", "label": "Normal" },
+    "temp":     { "value": 29.8, "unit": "degC","source": "ISRO INSAT-3D",             "date": "2026-06-29", "label": "Normal" },
+    "soil":     { "value": 48,   "unit": "%",  "source": "ICAR Soil Moisture Grid",   "date": "2026-06-29", "label": "Adequate" }
+  },
+  "risk": {
+    "weightedScore": 38,
+    "eligible":      false,
+    "payoutEstimate": 136800,
+    "premiumEstimate": 3010,
+    "confidence":    69
+  },
+  "farmers": 11200
+}

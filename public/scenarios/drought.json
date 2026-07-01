@@ -1,0 +1,23 @@
+{
+  "scenario": "drought",
+  "district": "Barmer",
+  "state": "Rajasthan",
+  "event": "Drought",
+  "cachedAt": "2026-06-30T09:40:00Z",
+  "source": "cache",
+  "cacheReason": "Pre-validated baseline — live data delayed",
+  "oracle": {
+    "ndvi":     { "value": 0.21, "source": "NASA MODIS MYD13A1", "date": "2026-06-29", "label": "Severe stress" },
+    "rainfall": { "value": 8,    "unit": "mm",  "source": "IMD District Rainfall API", "date": "2026-06-29", "label": "Drought risk" },
+    "temp":     { "value": 47.2, "unit": "degC","source": "ISRO INSAT-3D",             "date": "2026-06-29", "label": "Heatwave" },
+    "soil":     { "value": 12,   "unit": "%",  "source": "ICAR Soil Moisture Grid",   "date": "2026-06-29", "label": "Critically dry" }
+  },
+  "risk": {
+    "weightedScore": 91,
+    "eligible":      true,
+    "payoutEstimate": 327600,
+    "premiumEstimate": 7207,
+    "confidence":    95
+  },
+  "farmers": 24300
+}
