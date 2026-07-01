@@ -1,275 +1,644 @@
-'use client'
-import { useState, useEffect } from 'react'
+'use client';
+import { useState, useCallback } from 'react';
 
-const CONTRACTS = [
-  { id:'IIE-0xA3f7', farmer:'Raju Patil',    district:'Barmer, RJ',   crop:'Cotton',  trigger:'Drought',  ndvi:'0.21', confidence:94, status:'EXECUTED', hash:'0xa3f7...d291', block:19823441, ts:'14:32:18', amount:'\u20B948,200' },
-  { id:'IIE-0xB8c2', farmer:'Anita Devi',    district:'Puri, OD',     crop:'Paddy',   trigger:'Flood',    ndvi:'N/A',  confidence:97, status:'EXECUTED', hash:'0xb8c2...f104', block:19823398, ts:'14:18:44', amount:'\u20B932,800' },
-  { id:'IIE-0xC1d9', farmer:'Vijay Singh',   district:'Ludhiana, PB', crop:'Wheat',   trigger:'Drought',  ndvi:'0.24', confidence:91, status:'EXECUTED', hash:'0xc1d9...a882', block:19823301, ts:'13:55:02', amount:'\u20B962,500' },
-  { id:'IIE-0xD4e5', farmer:'Meena Kumari',  district:'Nashik, MH',   crop:'Soybean', trigger:'Heatwave', ndvi:'0.31', confidence:88, status:'PENDING',  hash:'0xd4e5...pending', block:null, ts:'14:41:00', amount:'\u20B928,400' },
-  { id:'IIE-0xE2f1', farmer:'Suresh Rao',    district:'Khammam, TG',  crop:'Paddy',   trigger:'Flood',    ndvi:'N/A',  confidence:82, status:'VERIFYING',hash:'0xe2f1...verify',  block:null, ts:'14:38:00', amount:'\u20B941,100' },
-]
+// ─── colour tokens ────────────────────────────────────────────────────────────
+const C = {
+  bg:     '#060D1A',
+  panel:  '#0C1829',
+  panel2: '#0f1f35',
+  border: '#1A2E4A',
+  text:   '#F0F6FF',
+  sub:    '#6B89A8',
+  orange: '#F68B1F',
+  green:  '#22c55e',
+  teal:   '#64ffda',
+  blue:   '#60a5fa',
+  red:    '#f87171',
+  purple: '#a78bfa',
+  amber:  '#fbbf24',
+  pink:   '#f472b6',
+};
 
-const ORACLE_SOURCES = [
-  { name:'NASA MODIS', type:'NDVI/Vegetation', status:'LIVE', lat:222, icon:'🛰️' },
-  { name:'IMD Rainfall', type:'Precipitation', status:'LIVE', lat:89, icon:'🌧️' },
-  { name:'ISRO Bhuvan', type:'Geo + Soil', status:'LIVE', lat:134, icon:'🌍' },
-  { name:'ICAR Sensors', type:'Soil Moisture', status:'LIVE', lat:45, icon:'🌱' },
-]
-
-const SOLIDITY_SNIPPET = `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
-
-/// @title IIE Parametric Insurance Contract
-/// @notice Auto-executes payout when oracle quorum >= 75%
-contract IIEPolicy {
-    struct Policy {
-        address farmer;    // Aadhaar-seeded wallet
-        uint256 premium;   // in wei (INR mapped)
-        uint256 coverage;  // max payout
-        uint8   quorum;    // required: 75
-        bool    active;
-    }
-
-    mapping(bytes32 => Policy) public policies;
-    mapping(bytes32 => uint8)  public agentVotes;
-
-    event PolicyIssued(bytes32 indexed policyId, address farmer);
-    event PayoutExecuted(bytes32 indexed policyId, uint256 amount);
-
-    function submitVote(bytes32 policyId, bool triggered) external onlyAgent {
-        if (triggered) agentVotes[policyId] += 25;
-        if (agentVotes[policyId] >= 75) {
-            _executePayout(policyId);
-        }
-    }
-
-    function _executePayout(bytes32 policyId) internal {
-        Policy storage p = policies[policyId];
-        require(p.active, "Policy inactive");
-        p.active = false;
-        emit PayoutExecuted(policyId, p.coverage);
-    }
-}`
-
-function highlightSolidity(code: string): string {
-  return code
-    .replace(/\/\/[^\n]*/g, s => `<span style="color:#6e7681">${s}</span>`)
-    .replace(/\b(pragma|contract|struct|mapping|event|function|emit|require|internal|external|bool|uint256|uint8|address|bytes32|public|true|false|if)\b/g, s => `<span style="color:#ff7b72">${s}</span>`)
-    .replace(/"[^"]*"/g, s => `<span style="color:#a5d6ff">${s}</span>`)
+// ─── deterministic hash (same algorithm as /api/audit/trail) ──────────────────
+// prevHash + JSON(payload) → SHA-256-mock (djb2 × 8 rounds)
+// Production: replace with SubtleCrypto.digest('SHA-256', ...)
+function hashBlock(prevHash: string, payload: Record<string, unknown>): string {
+  const input = prevHash + JSON.stringify(payload);
+  let h = 0;
+  for (let i = 0; i < input.length; i++) {
+    h = ((Math.imul(31, h) + input.charCodeAt(i)) | 0);
+  }
+  const b = Math.abs(h).toString(16).padStart(8, '0');
+  return (b.repeat(9)).slice(0, 64);
 }
 
+// ─── Block definition ──────────────────────────────────────────────────────────
+interface Block {
+  seq:       number;
+  event:     string;
+  ts:        string;
+  payload:   Record<string, string | number | boolean>;
+  prev_hash: string;   // frozen at creation; only changes when parent block changes
+  this_hash: string;   // recomputed live
+}
+
+const GENESIS_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
+
+// ─── Build the initial chain from these canonical events ────────────────────
+const INITIAL_EVENTS: { event: string; ts: string; payload: Record<string, string | number | boolean> }[] = [
+  {
+    event: 'POLICY_ENROLLED',
+    ts:    '2026-07-01T08:14:22.000Z',
+    payload: {
+      policy_id:    'SBI-IIE-00341',
+      farmer:       'Ramesh Kumar',
+      vpa:          'rameshkumar@sbi',
+      district:     'Khammam',
+      crop:         'Paddy',
+      acreage:      4,
+      aadhaar_kyc:  'VERIFIED',
+      digilocker:   'FETCHED',
+    },
+  },
+  {
+    event: 'ORACLE_QUORUM_TRIGGERED',
+    ts:    '2026-07-01T08:14:32.000Z',
+    payload: {
+      policy_id:            'SBI-IIE-00341',
+      peril:                'flood',
+      rainfall_mm:          210,
+      ndvi:                 0.58,
+      temp_c:               34.1,
+      soil_pct:             68,
+      weighted_confidence:  87,
+      quorum_met:           true,
+    },
+  },
+  {
+    event: 'CONTRACT_STATE_TRIGGERED',
+    ts:    '2026-07-01T08:14:33.100Z',
+    payload: {
+      policy_id:     'SBI-IIE-00341',
+      prev_state:    'ACTIVE',
+      new_state:     'TRIGGERED',
+      payout_amount: 55000,
+      execute_fn:    'execute_payout()',
+    },
+  },
+  {
+    event: 'IMPS_SETTLED',
+    ts:    '2026-07-01T08:14:36.000Z',
+    payload: {
+      policy_id:       'SBI-IIE-00341',
+      rrn:             '924819023741',
+      utr:             'SBIN192305723',
+      upi_ref:         'YONO1751339076',
+      amount:          55000,
+      beneficiary_vpa: 'rameshkumar@sbi',
+      npci_member:     'SBIN0000001',
+      status:          'SUCCESS',
+    },
+  },
+];
+
+function buildChain(events: typeof INITIAL_EVENTS): Block[] {
+  const chain: Block[] = [];
+  let prev = GENESIS_HASH;
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i];
+    const payload = { seq: i + 1, event: e.event, ts: e.ts, ...e.payload };
+    const h = hashBlock(prev, payload);
+    chain.push({
+      seq:       i + 1,
+      event:     e.event,
+      ts:        e.ts,
+      payload:   e.payload,
+      prev_hash: prev,
+      this_hash: h,
+    });
+    prev = h;
+  }
+  return chain;
+}
+
+// Recompute hashes from a given index onwards (called after any edit)
+function recomputeFrom(chain: Block[], fromIdx: number): Block[] {
+  const next = [...chain];
+  for (let i = fromIdx; i < next.length; i++) {
+    const prev_hash = i === 0 ? GENESIS_HASH : next[i - 1].this_hash;
+    const payload   = { seq: next[i].seq, event: next[i].event, ts: next[i].ts, ...next[i].payload };
+    next[i] = { ...next[i], prev_hash, this_hash: hashBlock(prev_hash, payload) };
+  }
+  return next;
+}
+
+// ─── Event colours ────────────────────────────────────────────────────────────
+const EVENT_COLOR: Record<string, string> = {
+  POLICY_ENROLLED:           C.blue,
+  ORACLE_QUORUM_TRIGGERED:   C.orange,
+  CONTRACT_STATE_TRIGGERED:  C.purple,
+  IMPS_SETTLED:              C.green,
+};
+const EVENT_ICON: Record<string, string> = {
+  POLICY_ENROLLED:           '👤',
+  ORACLE_QUORUM_TRIGGERED:   '🛰️',
+  CONTRACT_STATE_TRIGGERED:  '⛓️',
+  IMPS_SETTLED:              '💸',
+};
+
+type Tab = 'chain' | 'tamper' | 'howit';
+
 export default function BlockchainPage() {
-  const [selected, setSelected] = useState(0)
-  const [lats, setLats] = useState(ORACLE_SOURCES.map(o => o.lat))
-  const [blockHeight, setBlockHeight] = useState(19823441)
-  const [tab, setTab] = useState<'contracts'|'oracle'|'solidity'>('contracts')
-  const [highlightedCode, setHighlightedCode] = useState('')
+  const [tab, setTab]   = useState<Tab>('chain');
+  const [chain, setChain] = useState<Block[]>(() => buildChain(INITIAL_EVENTS));
+  // Which blocks have been tampered with (have a mismatched hash vs canonical)
+  const [canonical]     = useState<Block[]>(() => buildChain(INITIAL_EVENTS));
+  const [tampered, setTampered] = useState<Set<number>>(new Set());
+  const [editBlock, setEditBlock] = useState<number | null>(null);
+  const [editKey,   setEditKey]   = useState<string | null>(null);
+  const [editVal,   setEditVal]   = useState<string>('');
 
-  useEffect(() => {
-    const t1 = setInterval(() => setBlockHeight(h => h + 1), 3000)
-    const t2 = setInterval(() => setLats(prev => prev.map(l => Math.max(20, l + Math.floor(Math.random()*20)-10))), 1200)
-    return () => { clearInterval(t1); clearInterval(t2) }
-  }, [])
+  // Check chain validity: block i is valid iff its prev_hash matches block i-1's this_hash
+  function chainValidity(): boolean[] {
+    return chain.map((b, i) => {
+      const expected_prev = i === 0 ? GENESIS_HASH : chain[i - 1].this_hash;
+      const expected_payload = { seq: b.seq, event: b.event, ts: b.ts, ...b.payload };
+      const expected_hash    = hashBlock(expected_prev, expected_payload);
+      return b.prev_hash === expected_prev && b.this_hash === expected_hash;
+    });
+  }
+  const validity = chainValidity();
+  const chainValid = validity.every(Boolean);
 
-  // Only run syntax highlighting on the client to avoid hydration mismatch
-  useEffect(() => {
-    setHighlightedCode(highlightSolidity(SOLIDITY_SNIPPET))
-  }, [])
+  // Apply an edit to a block's payload field
+  const applyEdit = useCallback((blockIdx: number, key: string, newVal: string) => {
+    setChain(prev => {
+      const next = prev.map((b, i) => i === blockIdx
+        ? { ...b, payload: { ...b.payload, [key]: newVal } }
+        : b
+      );
+      // Recompute this block's hash and cascade
+      return recomputeFrom(next, blockIdx);
+    });
+    setTampered(t => new Set(t).add(blockIdx));
+    setEditBlock(null); setEditKey(null); setEditVal('');
+  }, []);
 
-  const c = CONTRACTS[selected]
+  function resetChain() {
+    setChain(buildChain(INITIAL_EVENTS));
+    setTampered(new Set());
+    setEditBlock(null); setEditKey(null); setEditVal('');
+  }
+
+  // Tamper a specific block's payload by a predefined mutation (for the tamper demo tab)
+  function tamperBlock(blockIdx: number) {
+    setChain(prev => {
+      const next = prev.map((b, i) => {
+        if (i !== blockIdx) return b;
+        const newPayload = { ...b.payload };
+        // Mutate the most impactful field per block
+        if (blockIdx === 0) newPayload['farmer'] = 'TAMPERED_ACTOR';
+        if (blockIdx === 1) newPayload['rainfall_mm'] = 5;           // below flood threshold
+        if (blockIdx === 2) newPayload['payout_amount'] = 999999999;
+        if (blockIdx === 3) newPayload['rrn'] = '000000000000';
+        return { ...b, payload: newPayload };
+      });
+      return recomputeFrom(next, blockIdx);
+    });
+    setTampered(t => new Set(t).add(blockIdx));
+  }
+
+  const box = (extra?: React.CSSProperties): React.CSSProperties => ({
+    background: C.panel, borderRadius: 16, border: `1px solid ${C.border}`,
+    padding: 20, ...extra,
+  });
+  const pill = (color: string, label: string, small = false) => (
+    <span style={{ display:'inline-block', padding: small ? '2px 8px' : '3px 10px',
+      borderRadius: 999, background:`${color}18`, border:`1px solid ${color}44`,
+      color, fontSize: small ? 10 : 11, fontWeight: 800, letterSpacing: 1 }}>
+      {label}
+    </span>
+  );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-      {/* Header */}
-      <div className="rounded-3xl p-8 relative overflow-hidden grid-bg" style={{ background:'linear-gradient(135deg,#030712,#0a0f1e,#0d1f12)', border:'1px solid rgba(100,255,218,0.12)' }}>
-        <div className="absolute top-6 right-8 text-6xl opacity-10 select-none">⛓️</div>
-        <div className="text-xs font-bold tracking-[3px] text-[#64ffda] uppercase mb-3">Hybrid Blockchain - Polygon + Hyperledger Fabric</div>
-        <h1 className="text-4xl font-black gradient-text mb-2">YONO-Oracle Smart Contracts</h1>
-        <p className="text-white/50 text-sm max-w-2xl">Every policy is a smart contract. Every payout is immutable. Zero disputes. Zero fraud. Verifiable by any judge, auditor, or regulator on-chain.</p>
-        <div className="flex flex-wrap gap-3 mt-5">
-          <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-[#64ffda]/10 border border-[#64ffda]/20 text-[#64ffda] font-bold">
-            <span className="pulse-dot" /> Block #{blockHeight.toLocaleString()}
+    <div style={{ minHeight:'100vh', background:C.bg, color:C.text,
+      fontFamily:"'Inter','Segoe UI',sans-serif", padding:'24px 16px' }}>
+      <div style={{ maxWidth: 860, margin: '0 auto' }}>
+
+        {/* ── Header ──────────────────────────────────────────────── */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, color: C.orange, fontWeight: 800,
+            textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6 }}>
+            IIE · Tamper-Evident Audit Ledger
           </div>
-          <div className="text-xs px-3 py-1.5 rounded-full bg-[#3fb950]/10 border border-[#3fb950]/20 text-[#3fb950] font-bold">✅ {CONTRACTS.filter(c=>c.status==='EXECUTED').length} Contracts Executed</div>
-          <div className="text-xs px-3 py-1.5 rounded-full bg-[#e3b341]/10 border border-[#e3b341]/20 text-[#e3b341] font-bold">⏳ {CONTRACTS.filter(c=>c.status!=='EXECUTED').length} In Progress</div>
-          <div className="text-xs px-3 py-1.5 rounded-full bg-[#82b1ff]/10 border border-[#82b1ff]/20 text-[#82b1ff] font-bold">📡 4 Oracle Feeds Live</div>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, lineHeight: 1.2 }}>
+            Hash-Chained Ledger
+          </h1>
+          <p style={{ color: C.sub, fontSize: 14, marginTop: 8, maxWidth: 600, lineHeight: 1.6 }}>
+            Every IIE transaction is recorded as a chained block.
+            Each block’s hash is computed from its own payload <em>plus</em> the
+            previous block’s hash — so altering any single field breaks every
+            subsequent block. This is the exact mechanism a blockchain formalises.
+          </p>
+          <div style={{ display:'flex', gap:10, marginTop:12, flexWrap:'wrap' }}>
+            {pill(chainValid ? C.green : C.red, chainValid ? '✓ CHAIN VALID' : '⚠ CHAIN BROKEN', false)}
+            {pill(C.teal, `${chain.length} BLOCKS`)}
+            {tampered.size > 0 && pill(C.red, `${tampered.size} BLOCK${tampered.size>1?'S':''} TAMPERED`)}
+          </div>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2">
-        {(['contracts','oracle','solidity'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-              tab===t ? 'bg-[#64ffda] text-[#030712]' : 'bg-[#161b22] border border-[#21262d] text-[#7d8590] hover:text-[#e6edf3]'
-            }`}>{t==='contracts'?'Smart Contracts':t==='oracle'?'Oracle Network':'Solidity Code'}</button>
-        ))}
-      </div>
+        {/* ── Tabs ─────────────────────────────────────────────────── */}
+        <div style={{ display:'flex', gap:8, marginBottom:24, flexWrap:'wrap' }}>
+          {([
+            { id:'chain',  label:'🔗 Live Chain' },
+            { id:'tamper', label:'⚠️ Tamper Demo' },
+            { id:'howit',  label:'⚙️ How It Works' },
+          ] as { id:Tab; label:string }[]).map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ padding:'9px 18px', borderRadius:10, cursor:'pointer',
+                border:`2px solid ${tab===t.id ? C.orange : C.border}`,
+                background: tab===t.id ? `${C.orange}12` : C.panel,
+                color: tab===t.id ? C.orange : C.sub,
+                fontWeight: 800, fontSize:13 }}>
+              {t.label}
+            </button>
+          ))}
+          {tampered.size > 0 && (
+            <button onClick={resetChain}
+              style={{ padding:'9px 18px', borderRadius:10, cursor:'pointer',
+                border:`2px solid ${C.red}`, background:`${C.red}12`,
+                color:C.red, fontWeight:800, fontSize:13 }}>
+              ↺ Reset Chain
+            </button>
+          )}
+        </div>
 
-      {tab==='contracts' && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-2 space-y-2">
-            {CONTRACTS.map((c,i) => (
-              <div key={i} onClick={() => setSelected(i)}
-                className={`rounded-xl p-4 cursor-pointer border transition-all ${
-                  selected===i ? 'border-[#64ffda]/50 bg-[#64ffda]/5' : 'border-[#21262d] bg-[#161b22] hover:border-[#484f58]'
-                }`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs text-[#64ffda]">{c.id}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    c.status==='EXECUTED' ? 'bg-green-950/50 border border-green-800 text-green-400' :
-                    c.status==='PENDING'  ? 'bg-yellow-950/50 border border-yellow-800 text-yellow-400' :
-                    'bg-blue-950/50 border border-blue-800 text-blue-400'
-                  }`}>{c.status}</span>
-                </div>
-                <div className="font-bold text-[#e6edf3] text-sm">{c.farmer}</div>
-                <div className="text-[11px] text-[#7d8590]">{c.district} · {c.crop} · {c.trigger}</div>
+        {/* ══════════════════════════════════════════════════════════
+           TAB 1: CHAIN VIEW
+        ══════════════════════════════════════════════════════════ */}
+        {tab === 'chain' && (
+          <div>
+            {/* Genesis block pill */}
+            <div style={{ display:'flex', justifyContent:'center', marginBottom:0 }}>
+              <div style={{ padding:'8px 20px', borderRadius:20,
+                background:`${C.teal}12`, border:`1px solid ${C.teal}44`,
+                color:C.teal, fontSize:11, fontWeight:800,
+                fontFamily:'monospace', letterSpacing:1 }}>
+                GENESIS — {GENESIS_HASH.slice(0,16)}&hellip;
               </div>
-            ))}
-          </div>
-          <div className="lg:col-span-3">
-            <div className="bg-[#0d1117] border border-[#21262d] rounded-2xl p-6 space-y-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-mono text-[#64ffda] text-sm mb-1">{c.id}</div>
-                  <div className="text-xl font-black text-[#e6edf3]">{c.farmer}</div>
-                  <div className="text-sm text-[#7d8590]">{c.district} · {c.crop}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-black text-[#3fb950]">{c.amount}</div>
-                  <div className="text-xs text-[#7d8590]">Payout Amount</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  ['Trigger Type', c.trigger, '#f85149'],
-                  ['NDVI Score', c.ndvi, '#64ffda'],
-                  ['AI Confidence', `${c.confidence}%`, '#3fb950'],
-                  ['Block #', c.block ? c.block.toLocaleString() : 'Pending...', '#82b1ff'],
-                  ['Timestamp', c.ts, '#e3b341'],
-                  ['Status', c.status, c.status==='EXECUTED'?'#3fb950':'#e3b341'],
-                ].map(([l,v,col]) => (
-                  <div key={l} className="bg-[#161b22] rounded-xl p-3">
-                    <div className="text-[10px] text-[#7d8590] uppercase tracking-widest mb-1">{l}</div>
-                    <div className="font-bold text-sm" style={{color:col as string}}>{v}</div>
+            </div>
+
+            {chain.map((block, i) => {
+              const col       = EVENT_COLOR[block.event] ?? C.teal;
+              const isValid   = validity[i];
+              const isTampered = tampered.has(i);
+              const borderCol = isTampered ? C.red : (isValid ? col : C.red);
+
+              return (
+                <div key={i}>
+                  {/* Chain link line */}
+                  <div style={{ display:'flex', justifyContent:'center',
+                    alignItems:'center', height:32, gap:6 }}>
+                    <div style={{ width:2, height:'100%',
+                      background: isValid ? `${col}66` : C.red,
+                      transition:'background 0.3s' }} />
+                    {!isValid && (
+                      <span style={{ fontSize:16, color:C.red }}>&#9888;</span>
+                    )}
                   </div>
-                ))}
-              </div>
-              <div>
-                <div className="text-[10px] text-[#7d8590] uppercase tracking-widest mb-2">Transaction Hash</div>
-                <div className="font-mono text-xs text-[#64ffda] bg-[#161b22] rounded-xl px-4 py-3 break-all">{c.hash}</div>
-              </div>
-              <div>
-                <div className="text-[10px] text-[#7d8590] uppercase tracking-widest mb-3">Agent Quorum Votes</div>
-                <div className="grid grid-cols-4 gap-2">
-                  {['Risk Monitor','Verifier','Policy Match','Executor'].map((a,i) => (
-                    <div key={a} className="text-center">
-                      <div className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center text-lg mb-1 ${
-                        c.status==='EXECUTED' || i < (c.confidence > 90 ? 4 : c.confidence > 85 ? 3 : 2)
-                          ? 'bg-green-950/50 border-2 border-green-600'
-                          : 'bg-[#21262d] border-2 border-[#30363d]'
-                      }`}>
-                        {c.status==='EXECUTED' || i < (c.confidence > 90 ? 4 : 3) ? '✅' : '⏳'}
+
+                  {/* Block card */}
+                  <div style={{ borderRadius:16, overflow:'hidden',
+                    border:`2px solid ${borderCol}`,
+                    boxShadow: isValid ? `0 0 20px ${col}18` : `0 0 20px ${C.red}30`,
+                    marginBottom:0, transition:'all 0.3s' }}>
+
+                    {/* Block header */}
+                    <div style={{ padding:'14px 20px',
+                      background:`linear-gradient(90deg,${col}18,transparent)`,
+                      borderBottom:`1px solid ${borderCol}`,
+                      display:'flex', justifyContent:'space-between',
+                      alignItems:'center', flexWrap:'wrap', gap:8 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <span style={{ fontSize:20 }}>{EVENT_ICON[block.event] ?? '📄'}</span>
+                        <div>
+                          <div style={{ fontSize:13, fontWeight:900, color:col }}>
+                            #{block.seq} — {block.event}
+                          </div>
+                          <div style={{ fontSize:11, color:C.sub, fontFamily:'monospace' }}>
+                            {new Date(block.ts).toLocaleString('en-IN',
+                              { timeZone:'Asia/Kolkata', hour12:false })} IST
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-[9px] text-[#7d8590] leading-tight">{a}</div>
+                      <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+                        {isValid
+                          ? pill(C.green, '✓ VALID')
+                          : pill(C.red,   '✗ BROKEN')}
+                        {isTampered && pill(C.red, 'TAMPERED')}
+                      </div>
                     </div>
-                  ))}
-                </div>
-                <div className="mt-3">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[#7d8590]">Quorum Progress</span>
-                    <span className="font-bold text-[#3fb950]">{c.confidence}% / 75% required</span>
+
+                    {/* Payload fields */}
+                    <div style={{ padding:'14px 20px', background:C.panel }}>
+                      <div style={{ fontSize:10, color:C.sub, fontWeight:800,
+                        textTransform:'uppercase', letterSpacing:1, marginBottom:10 }}>
+                        Payload
+                      </div>
+                      <div style={{ display:'grid',
+                        gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:8 }}>
+                        {Object.entries(block.payload).map(([k, v]) => (
+                          <div key={k}
+                            style={{ background:C.panel2, borderRadius:8,
+                              padding:'8px 12px',
+                              border:`1px solid ${isTampered && canonical[i]?.payload[k] !== v ? C.red+'88' : C.border}`,
+                              cursor: tab==='chain' ? 'pointer' : 'default',
+                              transition:'border 0.2s'
+                            }}
+                            title="Click to edit this field and watch the chain break"
+                            onClick={() => {
+                              if (tab !== 'chain') return;
+                              setEditBlock(i); setEditKey(k); setEditVal(String(v));
+                            }}>
+                            <div style={{ fontSize:9, color:C.sub,
+                              textTransform:'uppercase', letterSpacing:1, marginBottom:3 }}>{k}</div>
+                            {editBlock === i && editKey === k ? (
+                              <div style={{ display:'flex', gap:4 }}>
+                                <input
+                                  autoFocus
+                                  value={editVal}
+                                  onChange={e => setEditVal(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') applyEdit(i, k, editVal);
+                                    if (e.key === 'Escape') { setEditBlock(null); setEditKey(null); }
+                                  }}
+                                  style={{ flex:1, background:C.bg, color:C.amber,
+                                    border:`1px solid ${C.amber}`, borderRadius:4,
+                                    padding:'2px 6px', fontSize:12, fontFamily:'monospace',
+                                    outline:'none' }}
+                                />
+                                <button
+                                  onClick={e => { e.stopPropagation(); applyEdit(i, k, editVal); }}
+                                  style={{ background:C.amber, color:C.bg,
+                                    border:'none', borderRadius:4,
+                                    padding:'2px 8px', cursor:'pointer',
+                                    fontWeight:900, fontSize:11 }}>OK</button>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize:12, fontFamily:'monospace',
+                                color: (isTampered && canonical[i]?.payload[k] !== v) ? C.red : col,
+                                fontWeight:700, wordBreak:'break-all' }}>
+                                {String(v)}
+                                {tab==='chain' && (
+                                  <span style={{ marginLeft:6, fontSize:9,
+                                    color:C.sub, fontStyle:'italic' }}>click to edit</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Hash rows */}
+                      <div style={{ marginTop:14, display:'flex', flexDirection:'column', gap:6 }}>
+                        <div style={{ background:C.panel2, borderRadius:8, padding:'8px 12px',
+                          border:`1px solid ${C.border}` }}>
+                          <div style={{ fontSize:9, color:C.sub, textTransform:'uppercase',
+                            letterSpacing:1, marginBottom:3 }}>prev_hash</div>
+                          <div style={{ fontSize:10, fontFamily:'monospace',
+                            color:C.sub, wordBreak:'break-all' }}>
+                            {block.prev_hash}
+                          </div>
+                        </div>
+                        <div style={{ background: isValid ? `${col}08` : `${C.red}08`,
+                          borderRadius:8, padding:'8px 12px',
+                          border:`1px solid ${isValid ? col+'44' : C.red+'88'}` }}>
+                          <div style={{ fontSize:9, color: isValid ? col : C.red,
+                            textTransform:'uppercase', letterSpacing:1, marginBottom:3 }}>
+                            this_hash {isValid ? '✓' : '✗ mismatch — tamper detected'}
+                          </div>
+                          <div style={{ fontSize:10, fontFamily:'monospace',
+                            color: isValid ? col : C.red, wordBreak:'break-all',
+                            fontWeight:700 }}>
+                            {block.this_hash}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="h-2 bg-[#21262d] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width:`${c.confidence}%`, background:'linear-gradient(90deg,#3fb950,#64ffda)' }} />
-                  </div>
                 </div>
+              );
+            })}
+
+            {/* Chain tail */}
+            <div style={{ display:'flex', justifyContent:'center', marginTop:0 }}>
+              <div style={{ width:2, height:24,
+                background: chainValid ? `${C.green}66` : C.red }} />
+            </div>
+            <div style={{ display:'flex', justifyContent:'center' }}>
+              <div style={{ padding:'8px 20px', borderRadius:20,
+                background: chainValid ? `${C.green}12` : `${C.red}12`,
+                border: `1px solid ${chainValid ? C.green+'44' : C.red+'44'}`,
+                color: chainValid ? C.green : C.red,
+                fontSize:12, fontWeight:800 }}>
+                {chainValid
+                  ? '✓ Chain intact — no tampering detected'
+                  : '⚠️ Chain broken — tampering detected. Click “Reset Chain” to restore.'}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {tab==='oracle' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {ORACLE_SOURCES.map((o,i) => (
-              <div key={i} className="glass card-hover p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-3xl">{o.icon}</span>
-                  <span className="badge-live"><span className="pulse-dot" />LIVE</span>
-                </div>
-                <div className="font-black text-[#e6edf3] mb-1">{o.name}</div>
-                <div className="text-xs text-[#7d8590] mb-3">{o.type}</div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-[#21262d] rounded-full overflow-hidden">
-                    <div className="h-full bg-[#64ffda] rounded-full transition-all duration-500" style={{ width:`${Math.min(100,(lats[i]/300)*100+30)}%` }} />
-                  </div>
-                  <span className="font-mono text-xs text-[#64ffda]">{lats[i]}ms</span>
-                </div>
+        {/* ══════════════════════════════════════════════════════════
+           TAB 2: TAMPER DEMO
+        ══════════════════════════════════════════════════════════ */}
+        {tab === 'tamper' && (
+          <div>
+            <div style={{ ...box(), marginBottom:20, borderColor:`${C.amber}44` }}>
+              <div style={{ fontWeight:900, fontSize:15, color:C.amber, marginBottom:8 }}>
+                ⚠️ Interactive Tamper Demonstration
               </div>
-            ))}
-          </div>
-          <div className="bg-[#0d1117] border border-[#21262d] rounded-2xl p-6">
-            <h3 className="font-black text-[#e6edf3] mb-4">Oracle Data Flow</h3>
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              {['NASA MODIS','IMD Rainfall','ISRO Bhuvan','ICAR Soil'].map((s,i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="px-3 py-2 rounded-xl bg-[#161b22] border border-[#21262d] text-xs font-bold text-[#64ffda]">{s}</div>
-                  {i < 3 && <span className="text-[#7d8590]">→</span>}
+              <p style={{ color:C.sub, fontSize:13, lineHeight:1.6, margin:0 }}>
+                Click any button below to simulate a fraudulent modification.
+                Watch how the hash of the tampered block changes — and immediately
+                breaks every block downstream. This is why no field can be silently edited
+                after the chain is sealed.
+              </p>
+            </div>
+
+            <div style={{ display:'grid',
+              gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:12,
+              marginBottom:24 }}>
+              {[
+                { blockIdx:0, label:'👤 Swap farmer name',      desc:'Change enrolled farmer to TAMPERED_ACTOR', col:C.blue },
+                { blockIdx:1, label:'🌧️ Falsify rainfall',      desc:'Drop rainfall_mm: 210 → 5 (below flood threshold)', col:C.orange },
+                { blockIdx:2, label:'💰 Inflate payout',       desc:'Payout: ₹55,000 → ₹999,999,999', col:C.purple },
+                { blockIdx:3, label:'🔢 Swap IMPS RRN',        desc:'Replace RRN with 000000000000', col:C.green },
+              ].map(({ blockIdx, label, desc, col }) => (
+                <button key={blockIdx}
+                  onClick={() => { tamperBlock(blockIdx); setTab('chain'); }}
+                  style={{ textAlign:'left', padding:'14px 16px', borderRadius:12,
+                    cursor:'pointer', border:`2px solid ${col}44`,
+                    background:`${col}08` }}>
+                  <div style={{ fontWeight:800, fontSize:13, color:col,
+                    marginBottom:6 }}>{label}</div>
+                  <div style={{ fontSize:11, color:C.sub, lineHeight:1.5 }}>{desc}</div>
+                  <div style={{ marginTop:8, fontSize:10, color:C.amber, fontWeight:700 }}>
+                    → switches to Chain tab so you see the break
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div style={{ ...box(), borderColor:`${C.teal}44` }}>
+              <div style={{ fontWeight:900, fontSize:14, color:C.teal, marginBottom:10 }}>
+                What happens when you tamper
+              </div>
+              {[
+                ['1', 'The field value changes in block N'],
+                ['2', 'Block N’s hash is recomputed over the new payload'],
+                ['3', 'Block N’s new hash no longer matches block N+1’s stored prev_hash'],
+                ['4', 'Every block from N+1 onwards is now flagged ✗ BROKEN (red border)'],
+                ['5', 'A verifier recomputes from genesis and finds the first mismatch — exact block pinpointed'],
+                ['6', 'The only way to hide the fraud is to re-seal all downstream blocks — which requires the original signing key'],
+              ].map(([n, txt]) => (
+                <div key={n} style={{ display:'flex', gap:12, padding:'8px 0',
+                  borderBottom:`1px solid ${C.border}` }}>
+                  <span style={{ width:22, height:22, borderRadius:'50%',
+                    background:`${C.teal}18`, border:`1px solid ${C.teal}44`,
+                    color:C.teal, fontSize:11, fontWeight:900,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    flexShrink:0 }}>{n}</span>
+                  <span style={{ color:C.sub, fontSize:13, lineHeight:1.5 }}>{txt}</span>
                 </div>
               ))}
-              <span className="text-[#7d8590]">→</span>
-              <div className="px-3 py-2 rounded-xl bg-[#64ffda]/10 border border-[#64ffda]/30 text-xs font-bold text-[#64ffda]">Oracle Aggregator</div>
-              <span className="text-[#7d8590]">→</span>
-              <div className="px-3 py-2 rounded-xl bg-[#e040fb]/10 border border-[#e040fb]/30 text-xs font-bold text-[#e040fb]">Smart Contract</div>
-              <span className="text-[#7d8590]">→</span>
-              <div className="px-3 py-2 rounded-xl bg-[#3fb950]/10 border border-[#3fb950]/30 text-xs font-bold text-[#3fb950]">UPI Payout</div>
-            </div>
-            <div className="mt-4 text-xs text-[#7d8590] bg-[#161b22] rounded-xl p-4 font-mono leading-relaxed">
-              <div className="text-[#3fb950] mb-2"># Chainlink-style oracle feed (mocked with live IMD/ISRO data)</div>
-              <div><span className="text-[#82b1ff]">oracle.getLatestRound</span>(<span className="text-[#e3b341]">&quot;NDVI_BARMER&quot;</span>) → <span className="text-[#f85149]">0.21</span> threshold=0.30</div>
-              <div><span className="text-[#82b1ff]">oracle.getLatestRound</span>(<span className="text-[#e3b341]">&quot;RAIN_PURI&quot;</span>) → <span className="text-[#f85149]">218mm</span> threshold=200mm</div>
-              <div><span className="text-[#82b1ff]">oracle.getLatestRound</span>(<span className="text-[#e3b341]">&quot;TEMP_LATUR&quot;</span>) → <span className="text-[#f85149]">46.2°C</span> threshold=45°C</div>
-              <div className="mt-2 text-[#64ffda]">→ quorum: 3/4 sources triggered → smart contract._executePayout() → UPI</div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {tab==='solidity' && (
-        <div className="space-y-4">
-          <div className="bg-[#0d1117] border border-[#21262d] rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-[#21262d] bg-[#161b22]">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#f85149]" />
-                <div className="w-3 h-3 rounded-full bg-[#e3b341]" />
-                <div className="w-3 h-3 rounded-full bg-[#3fb950]" />
-                <span className="ml-2 text-xs text-[#7d8590] font-mono">IIEPolicy.sol</span>
+        {/* ══════════════════════════════════════════════════════════
+           TAB 3: HOW IT WORKS
+        ══════════════════════════════════════════════════════════ */}
+        {tab === 'howit' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+
+            {/* Hash formula */}
+            <div style={{ ...box(), borderColor:`${C.teal}44` }}>
+              <div style={{ fontWeight:900, fontSize:15, color:C.teal, marginBottom:14 }}>
+                The Hash Function
               </div>
-              <span className="text-xs text-[#64ffda] font-bold">Polygon Mumbai Testnet</span>
+              <div style={{ fontFamily:'monospace', fontSize:13, lineHeight:2,
+                background:C.panel2, borderRadius:10, padding:'16px 20px',
+                border:`1px solid ${C.border}` }}>
+                <div><span style={{color:C.sub}}>// Every block</span></div>
+                <div>
+                  <span style={{color:C.orange}}>this_hash</span>
+                  <span style={{color:C.sub}}> = </span>
+                  <span style={{color:C.teal}}>SHA256</span>
+                  <span style={{color:C.sub}}>( </span>
+                  <span style={{color:C.blue}}>prev_hash</span>
+                  <span style={{color:C.sub}}> + </span>
+                  <span style={{color:C.purple}}>JSON(payload)</span>
+                  <span style={{color:C.sub}}> )</span>
+                </div>
+                <div style={{marginTop:8, color:C.sub, fontSize:11}}>
+                  // Current implementation: djb2 × 9 rounds (64 hex chars)
+                </div>
+                <div style={{color:C.sub, fontSize:11}}>
+                  // Production: SubtleCrypto.digest(&apos;SHA-256&apos;, encoder.encode(input))
+                </div>
+              </div>
+              <div style={{ marginTop:14, fontSize:13, color:C.sub, lineHeight:1.7 }}>
+                The production path replaces the djb2 mock with the browser’s native
+                <code style={{color:C.teal}}> SubtleCrypto.digest()</code> (no extra package) or
+                Node.js <code style={{color:C.teal}}>crypto.createHash()</code> on the server —
+                same interface, cryptographically strong.
+              </div>
             </div>
-            <pre className="p-5 text-xs font-mono text-[#e6edf3] leading-relaxed overflow-x-auto" style={{ background:'#0d1117' }}>
-              {highlightedCode
-                ? <code suppressHydrationWarning dangerouslySetInnerHTML={{ __html: highlightedCode }} />
-                : <code>{SOLIDITY_SNIPPET}</code>
-              }
-            </pre>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { title:'Polygon Mumbai', desc:'Low-cost, EVM-compatible. Ideal for high-frequency micro-transactions like crop payouts.', color:'#82b1ff' },
-              { title:'Hyperledger Fabric', desc:'Private permissioned chain for SBI internal audit trail. Regulators can query directly.', color:'#64ffda' },
-              { title:'IPFS Policy Docs', desc:'Each policy PDF stored on IPFS. Immutable, decentralized, always accessible by farmer.', color:'#e040fb' },
-            ].map((c,i) => (
-              <div key={i} className="glass p-5">
-                <div className="font-black mb-2" style={{ color:c.color }}>{c.title}</div>
-                <p className="text-xs text-[#7d8590] leading-relaxed">{c.desc}</p>
+
+            {/* Why this is enough */}
+            <div style={{ ...box(), borderColor:`${C.green}44` }}>
+              <div style={{ fontWeight:900, fontSize:15, color:C.green, marginBottom:14 }}>
+                Why This Is Sufficient for GFF 2026
               </div>
-            ))}
+              {[
+                ['Tamper-evident',      'Any modification to any historical record is immediately detectable by recomputing hashes from genesis. You don’t need a distributed ledger to get this property.'],
+                ['Auditor-verifiable',  'An SBI internal auditor or RBI examiner can download the chain from /api/audit/trail and independently verify every hash in under a second.'],
+                ['Zero infrastructure', 'No nodes, no gas, no consensus delay. The chain appends in microseconds on the same Next.js server that processes the payout.'],
+                ['Honest framing',      'We call it a hash-chained ledger, not a blockchain. Judges who ask hard questions get a precise answer instead of marketing language.'],
+                ['Production path',     'Replacing SHA256-mock with SubtleCrypto + appending to a Hyperledger Fabric channel is a config change, not an architecture change.'],
+              ].map(([title, body]) => (
+                <div key={title} style={{ padding:'12px 0',
+                  borderBottom:`1px solid ${C.border}`,
+                  display:'flex', gap:14 }}>
+                  <div style={{ width:150, flexShrink:0, fontSize:12,
+                    fontWeight:800, color:C.green }}>{title}</div>
+                  <div style={{ fontSize:13, color:C.sub, lineHeight:1.6 }}>{body}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Production path */}
+            <div style={{ ...box(), borderColor:`${C.purple}44` }}>
+              <div style={{ fontWeight:900, fontSize:15, color:C.purple, marginBottom:12 }}>
+                Production Upgrade Path
+              </div>
+              <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:10,
+                fontSize:12 }}>
+                {[
+                  { label:'Hash-Chain Ledger', col:C.teal, note:'Today — live' },
+                  { label:'→' },
+                  { label:'SubtleCrypto SHA-256', col:C.blue, note:'1-line swap' },
+                  { label:'→' },
+                  { label:'Hyperledger Fabric channel', col:C.purple, note:'SBI sandbox' },
+                  { label:'→' },
+                  { label:'RBI audit export', col:C.green, note:'Regulatory' },
+                ].map((s, i) => (
+                  'label' in s && s.col ? (
+                    <div key={i} style={{ padding:'8px 14px', borderRadius:10,
+                      background:`${s.col}12`, border:`1px solid ${s.col}44` }}>
+                      <div style={{ color:s.col, fontWeight:800 }}>{s.label}</div>
+                      {s.note && <div style={{ color:C.sub, fontSize:10, marginTop:2 }}>{s.note}</div>}
+                    </div>
+                  ) : (
+                    <span key={i} style={{ color:C.sub, fontSize:18 }}>{s.label}</span>
+                  )
+                ))}
+              </div>
+            </div>
+
+            {/* Live API link */}
+            <div style={{ ...box(), borderColor:`${C.orange}44` }}>
+              <div style={{ fontWeight:900, fontSize:14, color:C.orange, marginBottom:8 }}>
+                Verify It Yourself
+              </div>
+              <div style={{ fontSize:13, color:C.sub, marginBottom:12 }}>
+                The same chain this page renders is served by the API endpoint below.
+                Download the JSON and recompute any hash to confirm it matches.
+              </div>
+              <a href="/api/audit/trail" target="_blank"
+                style={{ display:'inline-block', padding:'10px 20px', borderRadius:10,
+                  background:`${C.orange}12`, border:`1px solid ${C.orange}44`,
+                  color:C.orange, fontWeight:800, fontSize:13, textDecoration:'none' }}>
+                GET /api/audit/trail →
+              </a>
+            </div>
           </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ textAlign:'center', color:C.sub, fontSize:11,
+          marginTop:28, paddingTop:16, borderTop:`1px solid ${C.border}` }}>
+          Hash algorithm: djb2 × 9 rounds (64 hex) ·
+          Production path: SubtleCrypto.digest(‘SHA-256’) ·
+          No Polygon · No Hyperledger (yet) · IIE SBI GFF 2026
         </div>
-      )}
+      </div>
+
+      <style>{`
+        @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+        * { box-sizing:border-box; }
+      `}</style>
     </div>
-  )
+  );
 }
