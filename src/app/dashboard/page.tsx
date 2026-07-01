@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState, useEffect, useRef } from 'react';
+import OracleBadge from '@/components/OracleBadge';
+import { useOracle } from '@/hooks/useOracle';
 
 type Lang = 'en' | 'hi';
 type TxStatus = 'SUCCESS' | 'PROCESSING' | 'FAILED';
@@ -22,7 +24,7 @@ const DISTRICTS: DistrictPoint[] = [
 ];
 
 const AUDIT: AuditItem[] = [
-  { id: 1, title: 'Policy enrolled',         ts: '2026-06-30 09:40', hash: '9bf23c9e0a12ab7cfa42e1f441aa8b0b', prev: '00000000000000000000000000000000', accent: '#64ffda' },
+  { id: 1, title: 'Policy enrolled',         ts: '2026-06-30 09:40', hash: '9bf23c9e0a12ab7cfa42e1f441aa8b0b', prev: '00000000000000000000000000000000', accent: '#F68B1F' },
   { id: 2, title: 'Oracle quorum triggered', ts: '2026-06-30 09:42', hash: 'cb01918a8b2e7ce103aaf8f6e5b02d1e', prev: '9bf23c9e0a12ab7cfa42e1f441aa8b0b', accent: '#e3b341' },
   { id: 3, title: 'Smart contract executed', ts: '2026-06-30 09:42', hash: '44c2fbc17f5e1b99d48f337b874281be', prev: 'cb01918a8b2e7ce103aaf8f6e5b02d1e', accent: '#82b1ff' },
   { id: 4, title: 'IMPS payout settled',     ts: '2026-06-30 09:42', hash: 'd10c91c71182aa2b6c81db6eb0ab7aa1', prev: '44c2fbc17f5e1b99d48f337b874281be', accent: '#3fb950' },
@@ -58,6 +60,17 @@ function shortHash(h: string) { return `${h.slice(0, 10)}…${h.slice(-6)}`; }
 function statusColor(s: TxStatus) { return s === 'SUCCESS' ? '#3fb950' : s === 'PROCESSING' ? '#e3b341' : '#f85149'; }
 function riskColor(s: number) { return s >= 80 ? '#f85149' : s >= 60 ? '#e3b341' : s >= 40 ? '#82b1ff' : '#3fb950'; }
 
+// ── SW registration (runs once on mount) ─────────────────────────────────────
+function useSW() {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js', { scope: '/' })
+        .catch((err) => console.warn('SW registration failed:', err));
+    }
+  }, []);
+}
+
 // ── Animated counter ──────────────────────────────────────────────────────────
 function Counter({ target, prefix = '', suffix = '', duration = 1600 }: { target: number; prefix?: string; suffix?: string; duration?: number }) {
   const [val, setVal] = useState(0);
@@ -82,13 +95,13 @@ function Counter({ target, prefix = '', suffix = '', duration = 1600 }: { target
 
 // ── Hero Metrics ──────────────────────────────────────────────────────────────
 const HERO_METRICS = [
-  { label: 'Policies Enrolled',  target: 10000, prefix: '',   suffix: '',    color: '#64ffda', icon: '📋' },
+  { label: 'Policies Enrolled',  target: 10000, prefix: '',   suffix: '',    color: '#F68B1F', icon: '📋' },
   { label: 'Payouts Simulated',  target: 5,     prefix: '₹', suffix: ' Cr', color: '#3fb950', icon: '💸' },
   { label: 'Auto-Approval Rate', target: 92,    prefix: '',   suffix: '%',   color: '#82b1ff', icon: '🤖' },
   { label: 'Fraud Blocked',      target: 8,     prefix: '',   suffix: '%',   color: '#f85149', icon: '🛡️' },
 ];
 
-function HeroMetrics({ dark, border, panelStrong, sub }: { dark: boolean; border: string; panelStrong: string; sub: string; text: string }) {
+function HeroMetrics({ dark, border, panelStrong, sub, text }: { dark: boolean; border: string; panelStrong: string; sub: string; text: string }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 18 }}>
       {HERO_METRICS.map((m) => (
@@ -110,7 +123,7 @@ function HeroMetrics({ dark, border, panelStrong, sub }: { dark: boolean; border
 // ── Roadmap ───────────────────────────────────────────────────────────────────
 const ROADMAP = [
   { q: 'Q3 2026', label: 'Hackathon MVP',            detail: 'YONO mock · India Stack simulator · AI quorum · blockchain audit', status: 'done',    color: '#3fb950' },
-  { q: 'Q4 2026', label: 'IRDAI Sandbox Onboarding', detail: 'Apply for IRDAI regulatory sandbox · data localisation audit · DPDP compliance sign-off', status: 'active',  color: '#64ffda' },
+  { q: 'Q4 2026', label: 'IRDAI Sandbox Onboarding', detail: 'Apply for IRDAI regulatory sandbox · data localisation audit · DPDP compliance sign-off', status: 'active',  color: '#F68B1F' },
   { q: 'Q1 2027', label: 'SBI Core Banking Pilot',   detail: 'Finacle CBS API integration · NPCI IMPS live · 5 pilot districts in Rajasthan', status: 'planned', color: '#82b1ff' },
   { q: 'Q2 2027', label: 'PM-FASAL Integration',     detail: 'PFMS DBT live subsidy routing · Agri Ministry MoU · 50,000 farmer onboarding', status: 'planned', color: '#e3b341' },
   { q: 'Q3 2027', label: 'National Rollout',          detail: '500+ districts · FPO group policies · multi-crop support · IRDAI licensed insurer', status: 'planned', color: '#e040fb' },
@@ -257,9 +270,7 @@ function SecurityAudit({ dark, border, panelStrong, sub, text }: { dark: boolean
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SHARED RISK ENGINE — used by both ReasoningEngine and WhatIfSlider
-// ══════════════════════════════════════════════════════════════════════════════
+// ── Risk engine ────────────────────────────────────────────────────────────────
 function ndviLabel(v: number) { return v < 0.3 ? 'Severe stress' : v < 0.5 ? 'Moderate stress' : v < 0.65 ? 'Mild stress' : 'Healthy'; }
 function ndviColor(v: number) { return v < 0.3 ? '#f85149' : v < 0.5 ? '#f97316' : v < 0.65 ? '#e3b341' : '#3fb950'; }
 
@@ -270,7 +281,6 @@ function computeRisk(d: DistrictPoint, overrides?: { rainfall?: number; ndvi?: n
   const ndvi     = overrides?.ndvi     ?? d.ndvi;
   const temp     = overrides?.temp     ?? d.temp;
   const acreage  = overrides?.acreage  ?? 4.5;
-
   const ndviScore = Math.max(0, (0.5 - ndvi) / 0.5) * 100;
   const tempScore = Math.min(100, Math.max(0, (temp - 30) / 20) * 100);
   const rainScore = d.event === 'Flood'
@@ -279,7 +289,6 @@ function computeRisk(d: DistrictPoint, overrides?: { rainfall?: number; ndvi?: n
   const soilScore = d.event === 'Flood'
     ? Math.min(100, Math.max(0, (d.soil - 40) / 60) * 100)
     : Math.min(100, Math.max(0, (30 - d.soil) / 30) * 100);
-
   const weighted = ndviScore * 0.40 + tempScore * 0.25 + rainScore * 0.25 + soilScore * 0.10;
   const eligible  = weighted >= 60;
   const coverPerHa = 80000;
@@ -287,20 +296,16 @@ function computeRisk(d: DistrictPoint, overrides?: { rainfall?: number; ndvi?: n
   const payout     = Math.round(riskPerHa * acreage);
   const premium    = Math.round(payout * 0.022);
   const confidence = Math.min(99, Math.round(50 + weighted * 0.49));
-
   const reasons: string[] = [];
   if (ndviScore > 60)  reasons.push(`NDVI ${ndvi.toFixed(2)} — vegetation severely degraded (threshold < 0.30)`);
   if (tempScore > 50)  reasons.push(`Temp ${temp.toFixed(1)}°C — exceeds critical 42°C heatwave threshold`);
   if (rainScore > 50 && d.event !== 'Flood') reasons.push(`Rainfall ${rainfall}mm — below 25mm drought trigger`);
   if (rainScore > 50 && d.event === 'Flood') reasons.push(`Rainfall ${rainfall}mm — exceeds 200mm flood threshold`);
   if (reasons.length === 0) reasons.push('All parameters within normal range — low risk district');
-
   return { score: Math.round(weighted), eligible, payout, premium, riskPerHa, confidence, reasons };
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// REASONING ENGINE
-// ══════════════════════════════════════════════════════════════════════════════
+// ── Reasoning Engine ──────────────────────────────────────────────────────────
 function ReasoningEngine({ district, dark, border, panelStrong, sub, text }: {
   district: DistrictPoint; dark: boolean; border: string; panelStrong: string; sub: string; text: string;
 }) {
@@ -310,13 +315,13 @@ function ReasoningEngine({ district, dark, border, panelStrong, sub, text }: {
     { label: 'NDVI (NASA MODIS)',    value: district.ndvi.toFixed(2), unit: '',    badge: ndviLabel(district.ndvi),   color: ndviColor(district.ndvi),   bar: Math.round(district.ndvi * 100) },
     { label: 'Rainfall (IMD)',       value: district.rainfall,         unit: 'mm', badge: district.rainfall < 25 ? 'Drought risk' : district.rainfall > 200 ? 'Flood risk' : 'Normal', color: district.rainfall < 25 || district.rainfall > 200 ? '#f97316' : '#3fb950', bar: Math.min(100, Math.round(district.rainfall / 2.5)) },
     { label: 'Temperature (ISRO)',   value: district.temp.toFixed(1),  unit: '°C', badge: district.temp > 42 ? 'Heatwave' : 'Normal', color: district.temp > 42 ? '#f85149' : '#3fb950', bar: Math.min(100, Math.round((district.temp / 55) * 100)) },
-    { label: 'Soil Moisture (ICAR)', value: district.soil,             unit: '%',  badge: district.soil < 20 ? 'Critically dry' : 'Adequate', color: district.soil < 20 ? '#f97316' : '#64ffda', bar: district.soil },
+    { label: 'Soil Moisture (ICAR)', value: district.soil,             unit: '%',  badge: district.soil < 20 ? 'Critically dry' : 'Adequate', color: district.soil < 20 ? '#f97316' : '#F68B1F', bar: district.soil },
   ];
   const IMPACT = [
     { label: 'Eligible for Payout', value: r.eligible ? '✅ YES' : '❌ NO', color: eligibleColor, note: `Weighted risk score ${r.score}/100 — threshold ≥ 60` },
     { label: 'Risk per Hectare',    value: `₹${r.riskPerHa.toLocaleString('en-IN')}`, color: '#e3b341', note: `₹80,000 cover × ${r.score}% weighted risk` },
     { label: 'Estimated Payout',    value: `₹${r.payout.toLocaleString('en-IN')}`,    color: '#3fb950', note: `Risk/ha × 4.5 ha` },
-    { label: 'Actuarial Premium',   value: `₹${r.premium.toLocaleString('en-IN')}`,   color: '#64ffda', note: `2.2% of payout — net SBI risk after PM-FASAL subsidy` },
+    { label: 'Actuarial Premium',   value: `₹${r.premium.toLocaleString('en-IN')}`,   color: '#F68B1F', note: `2.2% of payout — net SBI risk after PM-FASAL subsidy` },
     { label: 'AI Confidence',       value: `${r.confidence}%`,                         color: '#a78bfa', note: `GB v3.0 quorum confidence across 3 oracle agents` },
   ];
   return (
@@ -334,7 +339,7 @@ function ReasoningEngine({ district, dark, border, panelStrong, sub, text }: {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={{ borderRadius: 16, border: `1px solid ${border}`, background: dark ? '#0d1117' : '#f8fafc', padding: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#64ffda', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>🛰️ Raw Oracle Data Points</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#F68B1F', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>🛰️ Raw Oracle Data Points</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {RAW.map(row => (
               <div key={row.label}>
@@ -351,18 +356,9 @@ function ReasoningEngine({ district, dark, border, panelStrong, sub, text }: {
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 12, background: dark ? '#161b22' : '#fff', border: `1px solid ${border}` }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#e3b341', marginBottom: 8 }}>⚡ Trigger Reasons</div>
-            {r.reasons.map((reason, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5, fontSize: 11, color: sub, lineHeight: 1.5 }}>
-                <span style={{ color: r.eligible ? '#f97316' : '#64ffda', flexShrink: 0 }}>→</span>
-                <span>{reason}</span>
-              </div>
-            ))}
-          </div>
         </div>
         <div style={{ borderRadius: 16, border: `1px solid #3fb95044`, background: dark ? '#061210' : '#f0fdf4', padding: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#3fb950', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>💰 Business Impact — Translated to ₹</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#3fb950', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>💰 Business Impact</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {IMPACT.map(row => (
               <div key={row.label} style={{ padding: '12px 14px', borderRadius: 12, background: dark ? '#0d1f1a' : '#fff', border: `1px solid ${row.color}33` }}>
@@ -372,198 +368,77 @@ function ReasoningEngine({ district, dark, border, panelStrong, sub, text }: {
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 14, padding: '14px', borderRadius: 12, background: '#3fb95018', border: '1px solid #3fb95044' }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#3fb950', marginBottom: 6 }}>📋 SBI Risk Summary</div>
-            <div style={{ fontSize: 12, color: sub, lineHeight: 1.6 }}>
-              Based on oracle data for <b style={{ color: text }}>{district.district}</b>, SBI mitigates{' '}
-              <b style={{ color: '#3fb950' }}>₹{r.riskPerHa.toLocaleString('en-IN')} per hectare</b> of crop loss risk.
-              At 4.5 ha, total exposure is <b style={{ color: '#e3b341' }}>₹{r.payout.toLocaleString('en-IN')}</b>,
-              covered by actuarial premium of <b style={{ color: '#64ffda' }}>₹{r.premium.toLocaleString('en-IN')}</b>.
-              {r.eligible
-                ? ' IMPS payout will be auto-triggered within 3 seconds of quorum confirmation.'
-                : ' District is below trigger threshold — policy remains ACTIVE, no payout initiated.'}
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// WHAT-IF SLIDER
-// ══════════════════════════════════════════════════════════════════════════════
+// ── What-If Slider ─────────────────────────────────────────────────────────────
 function WhatIfSlider({ district, dark, border, panelStrong, sub, text }: {
   district: DistrictPoint; dark: boolean; border: string; panelStrong: string; sub: string; text: string;
 }) {
   const baseline = computeRisk(district);
-
   const [rainfall, setRainfall] = useState(district.rainfall);
-  const [ndvi,     setNdvi]     = useState(Math.round(district.ndvi * 100));   // 0–100 → /100 on use
+  const [ndvi,     setNdvi]     = useState(Math.round(district.ndvi * 100));
   const [temp,     setTemp]     = useState(Math.round(district.temp));
-  const [acreage,  setAcreage]  = useState(45);                                 // 10× for slider (0.1 step)
-
+  const [acreage,  setAcreage]  = useState(45);
   const reset = () => { setRainfall(district.rainfall); setNdvi(Math.round(district.ndvi * 100)); setTemp(Math.round(district.temp)); setAcreage(45); };
-
-  // Recompute whenever district changes
   useEffect(() => { reset(); }, [district.district]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const sim = computeRisk(district, { rainfall, ndvi: ndvi / 100, temp, acreage: acreage / 10 });
-
   const payoutDelta = sim.payout - baseline.payout;
   const scoreDelta  = sim.score  - baseline.score;
   const deltaColor  = (d: number) => d > 0 ? '#f85149' : d < 0 ? '#3fb950' : sub;
   const deltaLabel  = (d: number, prefix = '') => d === 0 ? '— no change' : `${d > 0 ? '▲' : '▼'} ${prefix}${Math.abs(d).toLocaleString('en-IN')}`;
-
   const eligibleColor = sim.eligible ? '#3fb950' : '#f85149';
-
   const SLIDERS = [
-    {
-      label: 'Rainfall', unit: 'mm', icon: '🌧️',
-      min: 0, max: 300, step: 1,
-      value: rainfall, set: setRainfall,
-      note: district.event === 'Flood' ? 'Higher = more flood risk' : 'Lower = more drought risk',
-      color: '#82b1ff',
-    },
-    {
-      label: 'NDVI Index', unit: '', icon: '🌱',
-      min: 0, max: 100, step: 1,
-      value: ndvi, set: setNdvi,
-      display: (ndvi / 100).toFixed(2),
-      note: 'Lower NDVI = crop stress = higher payout',
-      color: ndviColor(ndvi / 100),
-    },
-    {
-      label: 'Temperature', unit: '°C', icon: '🌡️',
-      min: 20, max: 55, step: 1,
-      value: temp, set: setTemp,
-      note: 'Above 42°C triggers heatwave risk factor',
-      color: temp > 42 ? '#f85149' : '#3fb950',
-    },
-    {
-      label: 'Land Acreage', unit: ' ha', icon: '🗺️',
-      min: 5, max: 100, step: 5,
-      value: acreage, set: setAcreage,
-      display: (acreage / 10).toFixed(1),
-      note: 'Payout scales linearly with acreage',
-      color: '#e3b341',
-    },
+    { label: 'Rainfall', unit: 'mm', icon: '🌧️', min: 0, max: 300, step: 1, value: rainfall, set: setRainfall, note: district.event === 'Flood' ? 'Higher = more flood risk' : 'Lower = more drought risk', color: '#82b1ff' },
+    { label: 'NDVI Index', unit: '', icon: '🌱', min: 0, max: 100, step: 1, value: ndvi, set: setNdvi, display: (ndvi / 100).toFixed(2), note: 'Lower NDVI = crop stress = higher payout', color: ndviColor(ndvi / 100) },
+    { label: 'Temperature', unit: '°C', icon: '🌡️', min: 20, max: 55, step: 1, value: temp, set: setTemp, note: 'Above 42°C triggers heatwave risk factor', color: temp > 42 ? '#f85149' : '#3fb950' },
+    { label: 'Land Acreage', unit: ' ha', icon: '🗺️', min: 5, max: 100, step: 5, value: acreage, set: setAcreage, display: (acreage / 10).toFixed(1), note: 'Payout scales linearly with acreage', color: '#e3b341' },
   ];
-
   return (
     <div style={{ borderRadius: 20, border: `2px solid #f97316aa`, background: dark ? '#0d0a00' : panelStrong, padding: 24, marginBottom: 18 }}>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#f97316', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>🎛️ What-If Simulator</div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: text }}>{district.district} — Scenario Explorer</h2>
-          <div style={{ fontSize: 12, color: sub, marginTop: 4 }}>Adjust parameters to see how oracle inputs change the payout — model is reactive, not hardcoded</div>
+          <div style={{ fontSize: 12, color: sub, marginTop: 4 }}>Adjust parameters to see how oracle inputs change the payout</div>
         </div>
-        <button
-          onClick={reset}
-          style={{ padding: '8px 18px', borderRadius: 12, border: '1px solid #f9731655', background: '#f9731610', color: '#f97316', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-          ↺ Reset to Oracle data
-        </button>
+        <button onClick={reset} style={{ padding: '8px 18px', borderRadius: 12, border: '1px solid #f9731655', background: '#f9731610', color: '#f97316', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>↺ Reset</button>
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20 }}>
-
-        {/* LEFT — sliders */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {SLIDERS.map(sl => {
-            const displayVal = sl.display ?? `${sl.value}`;
+            const displayVal = (sl as { display?: string }).display ?? `${sl.value}`;
             return (
               <div key={sl.label} style={{ borderRadius: 16, border: `1px solid ${sl.color}33`, background: dark ? '#0d1117' : '#f8fafc', padding: '16px 18px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 18 }}>{sl.icon}</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: text }}>{sl.label}</span>
-                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 18 }}>{sl.icon}</span><span style={{ fontSize: 13, fontWeight: 800, color: text }}>{sl.label}</span></div>
                   <span style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 900, color: sl.color }}>{displayVal}{sl.unit}</span>
                 </div>
-                <input
-                  type="range"
-                  min={sl.min} max={sl.max} step={sl.step}
-                  value={sl.value}
-                  onChange={e => sl.set(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: sl.color, height: 6, cursor: 'pointer' }}
-                />
+                <input type="range" min={sl.min} max={sl.max} step={sl.step} value={sl.value} onChange={e => sl.set(Number(e.target.value))} style={{ width: '100%', accentColor: sl.color, height: 6, cursor: 'pointer' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
                   <span style={{ fontSize: 10, color: sub }}>{sl.note}</span>
-                  <span style={{ fontSize: 10, color: sub }}>
-                    {sl.min}{sl.unit === '' ? '' : sl.unit} — {sl.max}{sl.unit === '' ? '' : sl.unit}
-                  </span>
                 </div>
               </div>
             );
           })}
         </div>
-
-        {/* RIGHT — live output */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-          {/* Eligibility verdict */}
           <div style={{ borderRadius: 16, border: `2px solid ${eligibleColor}55`, background: dark ? `${eligibleColor}0a` : `${eligibleColor}08`, padding: '18px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: sub, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Simulated Verdict</div>
+            <div style={{ fontSize: 11, color: sub, marginBottom: 6, textTransform: 'uppercase' }}>Simulated Verdict</div>
             <div style={{ fontSize: 32, fontWeight: 900, color: eligibleColor }}>{sim.eligible ? '✅ ELIGIBLE' : '❌ NOT ELIGIBLE'}</div>
-            <div style={{ fontSize: 13, color: sub, marginTop: 6 }}>
-              Risk score: <b style={{ color: text }}>{sim.score}/100</b>
-              <span style={{ marginLeft: 8, fontSize: 12, color: deltaColor(scoreDelta), fontWeight: 700 }}>
-                {deltaLabel(scoreDelta)} pts
-              </span>
-            </div>
+            <div style={{ fontSize: 13, color: sub, marginTop: 6 }}>Risk score: <b style={{ color: text }}>{sim.score}/100</b> <span style={{ marginLeft: 8, fontSize: 12, color: deltaColor(scoreDelta), fontWeight: 700 }}>{deltaLabel(scoreDelta)} pts</span></div>
           </div>
-
-          {/* Payout card */}
           <div style={{ borderRadius: 16, border: '1px solid #3fb95044', background: dark ? '#061210' : '#f0fdf4', padding: '16px 18px' }}>
             <div style={{ fontSize: 11, color: sub, marginBottom: 4 }}>Simulated Payout</div>
             <div style={{ fontSize: 30, fontWeight: 900, color: '#3fb950' }}>₹{sim.payout.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: 12, marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: sub }}>vs oracle baseline</span>
-              <span style={{ fontWeight: 800, color: deltaColor(payoutDelta), fontSize: 13 }}>
-                {deltaLabel(payoutDelta, '₹')}
-              </span>
-            </div>
+            <div style={{ fontSize: 12, marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ color: sub }}>vs oracle baseline</span><span style={{ fontWeight: 800, color: deltaColor(payoutDelta), fontSize: 13 }}>{deltaLabel(payoutDelta, '₹')}</span></div>
           </div>
-
-          {/* Premium card */}
-          <div style={{ borderRadius: 16, border: '1px solid #64ffda44', background: dark ? '#001a14' : '#f0fdfb', padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: sub, marginBottom: 4 }}>Simulated Premium (2.2%)</div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: '#64ffda' }}>₹{sim.premium.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: 11, color: sub, marginTop: 4 }}>
-              At {(acreage / 10).toFixed(1)} ha · ₹{sim.riskPerHa.toLocaleString('en-IN')}/ha risk
-            </div>
-          </div>
-
-          {/* Weight breakdown bar */}
-          <div style={{ borderRadius: 16, border: `1px solid ${border}`, background: dark ? '#0d1117' : '#f8fafc', padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: sub, textTransform: 'uppercase', marginBottom: 12 }}>GB v3.0 Weight Contribution</div>
-            {[
-              { label: 'NDVI ×0.40',    pct: Math.max(0, (0.5 - ndvi/100) / 0.5) * 40,  color: ndviColor(ndvi/100) },
-              { label: 'Rainfall ×0.25', pct: district.event === 'Flood' ? Math.min(25, Math.max(0, (rainfall-100)/150)*25) : Math.min(25, Math.max(0, (50-rainfall)/50)*25), color: '#82b1ff' },
-              { label: 'Temp ×0.25',     pct: Math.min(25, Math.max(0, (temp-30)/20)*25), color: '#f97316' },
-              { label: 'Soil ×0.10',     pct: district.event === 'Flood' ? Math.min(10, Math.max(0, (district.soil-40)/60)*10) : Math.min(10, Math.max(0, (30-district.soil)/30)*10), color: '#a78bfa' },
-            ].map(w => (
-              <div key={w.label} style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
-                  <span style={{ color: sub }}>{w.label}</span>
-                  <span style={{ fontWeight: 700, color: w.color }}>{w.pct.toFixed(1)} pts</span>
-                </div>
-                <div style={{ height: 5, borderRadius: 999, background: dark ? '#1e293b' : '#e2e8f0', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${(w.pct / 40) * 100}%`, background: w.color, borderRadius: 999, transition: 'width 0.3s ease' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Insight pill */}
           <div style={{ borderRadius: 12, padding: '12px 14px', background: '#f9731610', border: '1px solid #f9731630', fontSize: 12, color: sub, lineHeight: 1.6 }}>
             <b style={{ color: '#f97316' }}>💡 Model insight: </b>
-            {sim.score > baseline.score
-              ? `Raising risk inputs increased weighted score by ${scoreDelta} pts — payout goes up by ₹${Math.abs(payoutDelta).toLocaleString('en-IN')}. This proves the model is reactive to real oracle data, not a fixed lookup table.`
-              : sim.score < baseline.score
-              ? `Improving conditions reduced weighted score by ${Math.abs(scoreDelta)} pts — saving SBI ₹${Math.abs(payoutDelta).toLocaleString('en-IN')} in payout exposure.`
-              : `Parameters match oracle baseline. Adjust sliders to simulate alternative climate scenarios.`}
+            {sim.score > baseline.score ? `Raising risk inputs increased score by ${scoreDelta} pts — payout ▲ ₹${Math.abs(payoutDelta).toLocaleString('en-IN')}.` : sim.score < baseline.score ? `Improving conditions reduced score by ${Math.abs(scoreDelta)} pts — saving SBI ₹${Math.abs(payoutDelta).toLocaleString('en-IN')}.` : `Parameters match oracle baseline.`}
           </div>
         </div>
       </div>
@@ -579,20 +454,27 @@ export default function DashboardPage() {
   const [dark, setDark]               = useState(true);
   const [selected, setSelected]       = useState(DISTRICTS[0]);
   const [policyState, setPolicyState] = useState<PolicyState>('TRIGGERED');
+
+  // Register service worker once
+  useSW();
+
+  // Cache-first oracle fetch — drives the badge
+  const { source, cacheReason, loading } = useOracle(selected.district);
+
   const t = COPY[lang];
 
   const theme = useMemo(() => ({
-    bg:          dark ? '#030712'                : '#f8fafc',
-    panel:       dark ? 'rgba(255,255,255,0.04)' : '#ffffff',
-    panelStrong: dark ? '#0d1117'                : '#ffffff',
-    border:      dark ? 'rgba(255,255,255,0.08)' : '#dbe4f0',
-    text:        dark ? '#e6edf3'                : '#0f172a',
-    sub:         dark ? '#7d8590'                : '#64748b',
-    grid:        dark ? 'rgba(100,255,218,0.06)' : 'rgba(26,35,126,0.08)',
+    bg:          dark ? '#0F1E36'                : '#f8fafc',
+    panel:       dark ? 'rgba(27,42,74,0.80)'   : '#ffffff',
+    panelStrong: dark ? '#1B2A4A'               : '#ffffff',
+    border:      dark ? 'rgba(245,247,250,0.10)': '#dbe4f0',
+    text:        dark ? '#F5F7FA'               : '#0f172a',
+    sub:         dark ? '#8FA3C0'               : '#64748b',
+    grid:        dark ? 'rgba(246,139,31,0.06)' : 'rgba(27,42,74,0.08)',
   }), [dark]);
 
   const kpis = [
-    { label: t.kpi1, value: '8',      sub: 'NASA · IMD · ISRO · ICAR', color: '#64ffda' },
+    { label: t.kpi1, value: '8',      sub: 'NASA · IMD · ISRO · ICAR', color: '#F68B1F' },
     { label: t.kpi2, value: '3',      sub: 'Weighted quorum >=75%',     color: '#e3b341' },
     { label: t.kpi3, value: '₹1.53L', sub: 'IMPS + UPI',               color: '#3fb950' },
     { label: t.kpi4, value: '<3s',    sub: 'Edge + NPCI sim',           color: '#82b1ff' },
@@ -612,13 +494,17 @@ export default function DashboardPage() {
 
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 16px 40px' }}>
 
-        {/* Header */}
-        <div className="panel" style={{ padding: 24, marginBottom: 18, background: dark ? 'linear-gradient(135deg,#0d1117,#0a0f1e,#0d1b4b)' : 'linear-gradient(135deg,#ffffff,#eef4ff,#eafaf7)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* ── Header ── */}
+        <div className="panel" style={{ padding: 24, marginBottom: 18, background: dark ? 'linear-gradient(135deg,#0F1E36,#1B2A4A,#1a3060)' : 'linear-gradient(135deg,#ffffff,#eef4ff)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontSize: 12, color: '#64ffda', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>YONO-Oracle IIE</div>
+              <div style={{ fontSize: 12, color: '#F68B1F', fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>YONO-Oracle IIE</div>
               <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900 }}>{t.title}</h1>
               <p style={{ marginTop: 8, color: theme.sub, maxWidth: 760, fontSize: 14 }}>{t.subtitle}</p>
+              {/* ── Oracle Badge (live / cache / loading) ── */}
+              <div style={{ marginTop: 12 }}>
+                <OracleBadge source={source} cacheReason={cacheReason} loading={loading} />
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button className="chip-btn" onClick={() => setDark(v => !v)}>{dark ? `☾ ${t.dark}` : `☀ ${t.light}`}</button>
@@ -647,7 +533,7 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{t.riskMap}</h2>
-                <div style={{ marginTop: 4, fontSize: 12, color: theme.sub }}>Click a district dot → Reasoning Engine + What-If Simulator update below ↓</div>
+                <div style={{ marginTop: 4, fontSize: 12, color: theme.sub }}>Click a district → Reasoning Engine + What-If Simulator update ↓</div>
               </div>
               <div style={{ fontSize: 12, color: theme.sub }}>{selected.district}, {selected.state} · {selected.score}/100</div>
             </div>
@@ -656,15 +542,15 @@ export default function DashboardPage() {
                 <svg viewBox="0 0 520 360" width="100%" height="100%">
                   <defs>
                     <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor={dark ? '#0d1117' : '#f8fbff'} />
-                      <stop offset="100%" stopColor={dark ? '#111827' : '#eef6ff'} />
+                      <stop offset="0%" stopColor={dark ? '#0F1E36' : '#f8fbff'} />
+                      <stop offset="100%" stopColor={dark ? '#1B2A4A' : '#eef6ff'} />
                     </linearGradient>
                   </defs>
                   <rect x="0" y="0" width="520" height="360" fill="url(#bgGrad)" rx="18" />
                   {Array.from({ length: 8 }).map((_, i) => <line key={`v-${i}`} x1={40+i*55} y1="20" x2={40+i*55} y2="340" stroke={theme.grid} strokeWidth="1" />)}
                   {Array.from({ length: 5 }).map((_, i) => <line key={`h-${i}`} x1="20" y1={40+i*60} x2="500" y2={40+i*60} stroke={theme.grid} strokeWidth="1" />)}
-                  <path d="M140 70 L200 58 L250 78 L296 98 L338 130 L382 162 L396 212 L380 258 L336 292 L290 286 L255 256 L235 226 L200 214 L165 176 L150 140 Z" fill={dark ? '#132033' : '#dcecff'} stroke={dark ? '#29415f' : '#aac4e8'} strokeWidth="2" />
-                  <path d="M248 286 L266 315 L288 330" fill="none" stroke={dark ? '#29415f' : '#aac4e8'} strokeWidth="2" />
+                  <path d="M140 70 L200 58 L250 78 L296 98 L338 130 L382 162 L396 212 L380 258 L336 292 L290 286 L255 256 L235 226 L200 214 L165 176 L150 140 Z" fill={dark ? '#1B2A4A' : '#dcecff'} stroke={dark ? '#2E4470' : '#aac4e8'} strokeWidth="2" />
+                  <path d="M248 286 L266 315 L288 330" fill="none" stroke={dark ? '#2E4470' : '#aac4e8'} strokeWidth="2" />
                   {DISTRICTS.map((d) => {
                     const r = 6 + (d.score / 100) * 12;
                     const color = riskColor(d.score);
@@ -672,7 +558,7 @@ export default function DashboardPage() {
                     return (
                       <g key={d.district} onClick={() => setSelected(d)} style={{ cursor: 'pointer' }}>
                         <circle cx={d.x} cy={d.y} r={r+7} fill={`${color}22`} />
-                        <circle cx={d.x} cy={d.y} r={r} fill={color} stroke={active ? '#ffffff' : `${color}aa`} strokeWidth={active ? 3 : 1.5} />
+                        <circle cx={d.x} cy={d.y} r={r} fill={color} stroke={active ? '#F68B1F' : `${color}aa`} strokeWidth={active ? 3 : 1.5} />
                         <text x={d.x+12} y={d.y-10} fill={theme.text} fontSize="11" fontWeight="700">{d.district}</text>
                       </g>
                     );
@@ -690,14 +576,14 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
                     <span style={{ color: theme.sub }}>Risk score</span><span style={{ fontWeight: 700 }}>{selected.score}%</span>
                   </div>
-                  <div style={{ height: 8, borderRadius: 999, background: dark ? '#1f2937' : '#e2e8f0', overflow: 'hidden' }}>
+                  <div style={{ height: 8, borderRadius: 999, background: dark ? '#0F1E36' : '#e2e8f0', overflow: 'hidden' }}>
                     <div style={{ width: `${selected.score}%`, height: '100%', background: riskColor(selected.score), borderRadius: 999 }} />
                   </div>
                 </div>
                 <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
                   <div><div style={{ fontSize: 11, color: theme.sub }}>{t.farmers}</div><div style={{ fontSize: 18, fontWeight: 800 }}>{selected.farmers.toLocaleString()}</div></div>
                   <div><div style={{ fontSize: 11, color: theme.sub }}>Oracle set</div><div style={{ fontSize: 13, fontWeight: 700 }}>NASA · IMD · ISRO · ICAR</div></div>
-                  <div><div style={{ fontSize: 11, color: theme.sub }}>Suggested action</div><div style={{ fontSize: 13, color: '#64ffda', fontWeight: 700 }}>Run verify → execute payout</div></div>
+                  <div><div style={{ fontSize: 11, color: theme.sub }}>Suggested action</div><div style={{ fontSize: 13, color: '#F68B1F', fontWeight: 700 }}>Run verify → execute payout</div></div>
                 </div>
               </div>
             </div>
@@ -715,7 +601,7 @@ export default function DashboardPage() {
               {(['ACTIVE', 'TRIGGERED', 'EXECUTED'] as PolicyState[]).map((s, i) => {
                 const active = s === policyState || (policyState === 'EXECUTED' && s !== 'ACTIVE') || (policyState === 'TRIGGERED' && s === 'ACTIVE');
                 const isCurrent = s === policyState;
-                const color = s === 'ACTIVE' ? '#64ffda' : s === 'TRIGGERED' ? '#e3b341' : '#3fb950';
+                const color = s === 'ACTIVE' ? '#F68B1F' : s === 'TRIGGERED' ? '#e3b341' : '#3fb950';
                 return (
                   <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ minWidth: 120, padding: '18px 12px', textAlign: 'center', borderRadius: 18, background: isCurrent ? `${color}18` : theme.panelStrong, border: `1px solid ${active ? color : theme.border}`, boxShadow: isCurrent ? `0 0 25px ${color}22` : 'none' }}>
@@ -729,16 +615,13 @@ export default function DashboardPage() {
             </div>
             <div style={{ marginTop: 18, borderRadius: 14, padding: 14, background: theme.panelStrong, border: `1px solid ${theme.border}` }}>
               <div style={{ fontSize: 11, color: theme.sub, marginBottom: 8 }}>Transition rule</div>
-              <div style={{ fontSize: 13, lineHeight: 1.7 }}>ACTIVE to TRIGGERED when weighted quorum is &gt;= 75%; TRIGGERED to EXECUTED after smart contract call and IMPS settlement confirmation.</div>
+              <div style={{ fontSize: 13, lineHeight: 1.7 }}>ACTIVE → TRIGGERED when quorum ≥ 75%; TRIGGERED → EXECUTED after smart contract call + IMPS confirmation.</div>
             </div>
           </section>
         </div>
 
-        {/* ── REASONING ENGINE ── */}
         <ReasoningEngine district={selected} dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
-
-        {/* ── WHAT-IF SLIDER ── */}
-        <WhatIfSlider district={selected} dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
+        <WhatIfSlider   district={selected} dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
 
         {/* Audit + Transactions */}
         <div className="dash-grid" style={{ marginBottom: 18 }}>
@@ -777,7 +660,7 @@ export default function DashboardPage() {
                 <tbody>
                   {TXS.map(tx => (
                     <tr key={`${tx.policyId}-${tx.rrn}`}>
-                      <td style={{ padding: '12px 8px', borderBottom: `1px solid ${theme.border}`, fontFamily: 'monospace', color: '#64ffda', fontSize: 12 }}>{tx.policyId}</td>
+                      <td style={{ padding: '12px 8px', borderBottom: `1px solid ${theme.border}`, fontFamily: 'monospace', color: '#F68B1F', fontSize: 12 }}>{tx.policyId}</td>
                       <td style={{ padding: '12px 8px', borderBottom: `1px solid ${theme.border}`, fontWeight: 700 }}>{tx.farmer}</td>
                       <td style={{ padding: '12px 8px', borderBottom: `1px solid ${theme.border}`, color: theme.sub }}>{tx.district}</td>
                       <td style={{ padding: '12px 8px', borderBottom: `1px solid ${theme.border}`, color: '#3fb950', fontWeight: 800 }}>₹{tx.amount.toLocaleString()}</td>
@@ -794,8 +677,8 @@ export default function DashboardPage() {
           </section>
         </div>
 
-        <Roadmap dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
-        <EdgeCases dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
+        <Roadmap      dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
+        <EdgeCases    dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
         <SecurityAudit dark={dark} border={theme.border} panelStrong={theme.panelStrong} sub={theme.sub} text={theme.text} />
       </div>
     </div>
