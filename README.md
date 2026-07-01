@@ -1,7 +1,7 @@
 # 🌾 YONO-Oracle IIE — Intelligent Insurance Engine
 
-[![Deploy Status](https://img.shields.io/badge/Vercel-Live-brightgreen?logo=vercel&logoColor=white)](https://yono-iie-web.vercel.app)
-[![Health](https://img.shields.io/badge/API%20Health-ok-3fb950?logo=statuspal)](https://yono-iie-web.vercel.app/api/health)
+[![Deploy Status](https://img.shields.io/badge/Vercel-Live-brightgreen?logo=vercel&logoColor=white)](https://iie-web-yono.vercel.app)
+[![Health](https://img.shields.io/badge/API%20Health-ok-3fb950?logo=statuspal)](https://iie-web-yono.vercel.app/api/health)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black?logo=nextdotjs)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178c6?logo=typescript)](https://www.typescriptlang.org)
 [![Edge Runtime](https://img.shields.io/badge/Runtime-Vercel%20Edge-purple?logo=vercel)](https://vercel.com/docs/functions/edge-functions)
@@ -15,16 +15,16 @@
 
 | Endpoint | URL |
 |----------|-----|
-| 🌐 **Frontend** | https://yono-iie-web.vercel.app |
-| ⚡ **Demo Flow** | https://yono-iie-web.vercel.app/demo |
-| 🗺️ **Dashboard** | https://yono-iie-web.vercel.app/dashboard |
-| 🔗 **Blockchain Audit** | https://yono-iie-web.vercel.app/blockchain |
-| 🏗️ **Architecture** | https://yono-iie-web.vercel.app/architecture |
-| 🛰️ **Oracle Feed** | https://yono-iie-web.vercel.app/risk |
-| 💸 **Payout Tracker** | https://yono-iie-web.vercel.app/payouts |
-| 🤖 **Agent Quorum** | https://yono-iie-web.vercel.app/agents |
-| 📊 **Impact Metrics** | https://yono-iie-web.vercel.app/impact |
-| 🇮🇳 **India Stack** | https://yono-iie-web.vercel.app/india-stack |
+| 🌐 **Frontend** | https://iie-web-yono.vercel.app |
+| ⚡ **Demo Flow** | https://iie-web-yono.vercel.app/demo |
+| 🗺️ **Dashboard** | https://iie-web-yono.vercel.app/dashboard |
+| 🔗 **Blockchain Audit** | https://iie-web-yono.vercel.app/blockchain |
+| 🏗️ **Architecture** | https://iie-web-yono.vercel.app/architecture |
+| 🛰️ **Oracle Feed** | https://iie-web-yono.vercel.app/risk |
+| 💸 **Payout Tracker** | https://iie-web-yono.vercel.app/payouts |
+| 🤖 **Agent Quorum** | https://iie-web-yono.vercel.app/agents |
+| 📊 **Impact Metrics** | https://iie-web-yono.vercel.app/impact |
+| 🇮🇳 **India Stack** | https://iie-web-yono.vercel.app/india-stack |
 
 ---
 
@@ -34,28 +34,28 @@ All endpoints are publicly accessible. Use header `X-Judge-Key: gff2026` for pri
 
 ```bash
 # Health check
-curl https://yono-iie-web.vercel.app/api/health
+curl https://iie-web-yono.vercel.app/api/health
 
 # Enroll a farmer
-curl -X POST https://yono-iie-web.vercel.app/api/oracle/enroll \
+curl -X POST https://iie-web-yono.vercel.app/api/oracle/enroll \
   -H 'Content-Type: application/json' \
   -d '{"name":"Ramesh Kumar","aadhaar_last4":"4821","district":"Barmer","state":"Rajasthan","crop":"wheat","acreage":4.5,"plan":"Smart Shield"}'
 
 # Verify + run oracle quorum
-curl -X POST https://yono-iie-web.vercel.app/api/oracle/verify \
+curl -X POST https://iie-web-yono.vercel.app/api/oracle/verify \
   -H 'Content-Type: application/json' \
   -d '{"policy_id":"SBI-IIE-00341","event_type":"drought","district":"Barmer","crop":"wheat","acreage":4.5}'
 
 # Execute smart contract
-curl -X POST https://yono-iie-web.vercel.app/api/contract/execute \
+curl -X POST https://iie-web-yono.vercel.app/api/contract/execute \
   -H 'Content-Type: application/json' \
   -d '{"policy_id":"SBI-IIE-00341","farmer_name":"Ramesh Kumar","payout_amount":45000}'
 
 # Audit trail
-curl https://yono-iie-web.vercel.app/api/audit/trail
+curl https://iie-web-yono.vercel.app/api/audit/trail
 
 # ML risk prediction
-curl -X POST https://yono-iie-web.vercel.app/api/ml/predict \
+curl -X POST https://iie-web-yono.vercel.app/api/ml/predict \
   -H 'Content-Type: application/json' \
   -d '{"district":"Barmer","ndvi":0.21,"temp_c":47.2,"rainfall_mm":8,"soil_moisture_pct":12}'
 ```
