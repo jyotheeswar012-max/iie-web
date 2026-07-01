@@ -10,13 +10,29 @@
 
 ---
 
+## ⚡ START HERE — Judge Demo (3 minutes, no login)
+
+> **[https://iie-web-yono.vercel.app/judge](https://iie-web-yono.vercel.app/judge)**
+>
+> 6-step auto-play: Farmer opens YONO → AI proactively offers insurance → Oracle quorum (94%) → Smart contract executes → ₹48,200 IMPS payout in 2.8s → Audit trail + KCC top-up.
+> Ends with a **Judge Scorecard** mapped to all 6 GFF 2026 evaluation criteria.
+>
+> Speed controls: 0.5× / 1× / 2× · Manual prev/next · Skip to any step · Jump to Scorecard
+
+```bash
+# Open judge demo directly
+open https://iie-web-yono.vercel.app/judge
+```
+
+---
+
 ## 🚀 Live Demo
 
 | Endpoint | URL |
 |----------|-----|
+| 🏆 **Judge Demo** — START HERE | https://iie-web-yono.vercel.app/judge |
 | 🌐 **Frontend** | https://iie-web-yono.vercel.app |
 | ⚡ **Demo Flow** | https://iie-web-yono.vercel.app/demo |
-| 🗺️ **Dashboard** | https://iie-web-yono.vercel.app/dashboard |
 | 🤖 **Agentic AI** | https://iie-web-yono.vercel.app/agentic |
 | 🏦 **SBI API Center** | https://iie-web-yono.vercel.app/sbi-apis |
 | 🔒 **Compliance Center** | https://iie-web-yono.vercel.app/india-stack |
@@ -24,6 +40,7 @@
 | 💸 **Payout Tracker** | https://iie-web-yono.vercel.app/payouts |
 | 🤖 **Agent Quorum** | https://iie-web-yono.vercel.app/agents |
 | 📊 **Impact Metrics** | https://iie-web-yono.vercel.app/impact |
+| 🗺️ **Dashboard** | https://iie-web-yono.vercel.app/dashboard |
 
 ---
 
@@ -151,7 +168,7 @@ curl -X POST https://iie-web-yono.vercel.app/api/ml/predict \
 ┌───────────────────────────────────────────────────────────┐
 │  SBI YONO Mobile App (100M+ farmers)                    │
 │  Next.js 14 · React 18 · YONO Session API               │
-└────────────────────┤────────────────────────────────────┘
+└────────────────────┤──────────────────────────────────────┘
                      │ HTTPS
 ┌────────────────────┴────────────────────────────────────┐
 │  IIE API Layer (Vercel Edge, < 50ms)                    │
@@ -192,21 +209,23 @@ curl -X POST https://iie-web-yono.vercel.app/api/ml/predict \
 
 | Route | Description |
 |-------|-------------|
-| `/` | Hero — pipeline animation, live stats |
+| `/judge` | **⭐ START HERE** — 3-min auto-play end-to-end demo + GFF Judge Scorecard |
+| `/` | Hero — pipeline animation, outcome numbers, live stats |
 | `/demo` | 5-step interactive demo flow |
-| `/agentic` | **NEW** — 72h proactive scenario player, 4 agent cards, passive vs agentic table, GFF 2026 pillars |
-| `/sbi-apis` | **NEW** — 4 live SBI API calls with request/response panels |
-| `/india-stack` | **UPGRADED** — Compliance Command Center: 28-item checklist, 96% score, field→act map, live audit log |
+| `/agentic` | 72h proactive scenario player, 4 agent cards, passive vs agentic table |
+| `/sbi-apis` | 4 live SBI API calls with request/response panels |
+| `/india-stack` | Compliance Command Center: 28-item checklist, 96% score, live audit log |
 | `/dashboard` | Risk map, FSM state, audit timeline |
 | `/agents` | AI agent quorum voting panel |
 | `/blockchain` | Smart contracts + Solidity source |
 | `/payouts` | Live payout tracker |
 | `/risk` | District risk table with ML scores |
-| `/impact` | IIE vs PMFBY comparison |
+| `/impact` | IIE vs PMFBY sourced evidence table + ML explainability + TAM waterfall |
 | `/enroll` | Farmer enrollment flow |
 | `/architecture` | System architecture + roadmap |
 | `/ml` | ML model panel |
 | `/pitch` | Pitch deck |
+| `/team` | Builder profile, GFF-mapped modules, competitor table |
 
 ---
 
