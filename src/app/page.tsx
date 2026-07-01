@@ -56,6 +56,21 @@ const TECH_BADGES = [
   '🏷️ Hyperledger Fabric','⚡ Vercel Edge',
 ];
 
+// Seeded base: realistic daily enrollment curve
+// Starts at ~2.1 lakh at midnight, grows ~14 Cr over the year → ~38,356/day
+// Within-day: starts slow, peaks midday, tapers evening
+function getDayBase(): number {
+  const now = new Date();
+  const midnight = new Date(now); midnight.setHours(0,0,0,0);
+  const secsToday = (now.getTime() - midnight.getTime()) / 1000;
+  const fractionOfDay = secsToday / 86400;
+  // Sine-curve so midday shows more enrollments
+  const intraday = Math.floor(38356 * (0.5 - 0.5 * Math.cos(Math.PI * fractionOfDay)));
+  // Day-of-year offset so the number grows all year
+  const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(),0,0).getTime()) / 86400000);
+  return 210000 + dayOfYear * 38356 + intraday;
+}
+
 export default function HomePage() {
   const [tick,     setTick]     = useState(0);
   const [itick,    setItick]    = useState(0);
@@ -64,14 +79,18 @@ export default function HomePage() {
   const [health,   setHealth]   = useState<null|{status:string;version:string}>(null);
   const [fsmPath,  setFsmPath]  = useState<FsmState[]>(FSM_SEQ);
   const [fsmStep,  setFsmStep]  = useState(0);
+  const [farmers,  setFarmers]  = useState(0);
 
   useEffect(() => {
+    setFarmers(getDayBase());
     const t1 = setInterval(()=>setTick(x=>x+1), 2200);
     const t2 = setInterval(()=>setItick(x=>x+1), 3400);
     const t3 = setInterval(()=>setAmt(a=>a+Math.floor(Math.random()*70000+30000)), 1800);
     const t4 = setInterval(()=>setFsmTick(x=>x+1), 1100);
+    // Tick farmers up: ~38k/day = ~1 every 2.3 seconds
+    const t5 = setInterval(()=>setFarmers(f=>f+1), 2300);
     fetch('/api/health').then(r=>r.json()).then(setHealth).catch(()=>{});
-    return ()=>{clearInterval(t1);clearInterval(t2);clearInterval(t3);clearInterval(t4);};
+    return ()=>{clearInterval(t1);clearInterval(t2);clearInterval(t3);clearInterval(t4);clearInterval(t5);};
   }, []);
 
   useEffect(() => {
@@ -88,24 +107,31 @@ export default function HomePage() {
   const ap  = tick  % PIPELINE.length;
   const im  = IMPACT[itick % IMPACT.length];
   const fmt = (n:number) => n>=1e7 ? '₹'+(n/1e7).toFixed(2)+' Cr' : '₹'+(n/1e5).toFixed(1)+' L';
+  const fmtFarmers = (n:number) => n.toLocaleString('en-IN');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
       <style>{`
-        @keyframes shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
-        @keyframes flip    { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes floaty  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
-        @keyframes pulseRing { 0%,100%{box-shadow:0 0 0 0 #f9731644} 50%{box-shadow:0 0 0 8px #f9731600} }
-        @keyframes fadeUp  { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-        .shimmer-text { background-size:200% auto; animation:shimmer 4s linear infinite; }
-        .flip-in  { animation:flip 0.4s ease both; }
-        .floaty   { animation:floaty 3s ease-in-out infinite; }
+        @keyframes shimmer    { 0%{background-position:-200% center} 100%{background-position:200% center} }
+        @keyframes flip       { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes floaty     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        @keyframes pulseRing  { 0%,100%{box-shadow:0 0 0 0 #f9731644} 50%{box-shadow:0 0 0 8px #f9731600} }
+        @keyframes fadeUp     { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes judgeGlow  { 0%,100%{box-shadow:0 0 32px 4px #f9731688,0 4px 32px #f9731644} 50%{box-shadow:0 0 56px 12px #f97316cc,0 4px 48px #f97316aa} }
+        @keyframes counterPop { 0%{transform:scale(1)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
+        .shimmer-text  { background-size:200% auto; animation:shimmer 4s linear infinite; }
+        .flip-in       { animation:flip 0.4s ease both; }
+        .floaty        { animation:floaty 3s ease-in-out infinite; }
         .navcard:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,0.6) !important; }
-        .navcard  { transition:all 0.2s ease; }
-        .fade-up  { animation:fadeUp 0.5s ease both; }
+        .navcard       { transition:all 0.2s ease; }
+        .fade-up       { animation:fadeUp 0.5s ease both; }
+        .judge-btn     { animation:judgeGlow 2s ease-in-out infinite; transition:transform 0.15s ease; }
+        .judge-btn:hover { transform:scale(1.04); }
+        .counter-num   { animation:counterPop 2.3s ease-in-out infinite; display:inline-block; }
         * { box-sizing:border-box }
       `}</style>
 
+      {/* ── Status bar ── */}
       <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8,marginBottom:20,padding:'8px 14px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(63,185,80,0.2)',borderRadius:12 }}>
         <div style={{ display:'flex',alignItems:'center',gap:10,flexWrap:'wrap' }}>
           <span style={{ width:8,height:8,borderRadius:'50%',background:'#3fb950',boxShadow:'0 0 8px #3fb95099',display:'inline-block',flexShrink:0 }} />
@@ -120,7 +146,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="text-center mb-10 fade-up">
+      {/* ── HERO ── */}
+      <div className="text-center mb-6 fade-up">
         <div className="text-6xl mb-4 floaty">🌾</div>
         <h1 className="text-5xl sm:text-6xl font-black mb-4 shimmer-text" style={{ background:'linear-gradient(90deg,#ffffff,#64ffda,#a78bfa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
           YONO-Oracle IIE
@@ -129,7 +156,18 @@ export default function HomePage() {
           India&apos;s first <b style={{ color:'#fff' }}>fully autonomous parametric crop insurance engine</b> —
           oracle-verified, AI-quorum-governed, blockchain-audited, IMPS-settled.
         </p>
-        <p style={{ color:'#64ffda',fontSize:12,marginBottom:28 }}>NASA · IMD · ISRO · ICAR · PM-FASAL · DigiLocker · UPI · Aadhaar · Hyperledger Fabric</p>
+        <p style={{ color:'#64ffda',fontSize:12,marginBottom:20 }}>NASA · IMD · ISRO · ICAR · PM-FASAL · DigiLocker · UPI · Aadhaar · Hyperledger Fabric</p>
+
+        {/* ── LIVE FARMERS COUNTER ── */}
+        <div style={{ display:'inline-block',margin:'0 auto 24px',padding:'14px 28px',borderRadius:16,background:'rgba(100,255,218,0.06)',border:'1.5px solid rgba(100,255,218,0.3)',boxShadow:'0 0 24px rgba(100,255,218,0.1)' }}>
+          <div style={{ fontSize:11,fontWeight:700,color:'#64ffda',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6 }}>🌾 Farmers Protected via SBI YONO Today</div>
+          <div style={{ fontSize:38,fontWeight:900,color:'#fff',fontFamily:'monospace',lineHeight:1 }}>
+            <span className="counter-num">{farmers > 0 ? fmtFarmers(farmers) : '—'}</span>
+          </div>
+          <div style={{ fontSize:10,color:'#4a9e7f',marginTop:5 }}>↑ live · updates every 2.3s · sim based on 14 Cr annual target</div>
+        </div>
+
+        {/* ── HERO BUTTONS ── */}
         <div style={{ display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap' }}>
           <Link href="/demo" style={{ padding:'12px 28px',borderRadius:12,fontWeight:800,fontSize:13,color:'#030712',background:'linear-gradient(135deg,#64ffda,#3fb950)',boxShadow:'0 4px 24px rgba(100,255,218,0.35)',textDecoration:'none' }}>⚡ Start Live Demo →</Link>
           <Link href="/agents" style={{ padding:'12px 22px',borderRadius:12,fontWeight:700,fontSize:13,color:'#e2e8f0',background:'rgba(167,139,250,0.12)',border:'1px solid rgba(167,139,250,0.35)',textDecoration:'none' }}>🤖 Agent Quorum</Link>
@@ -137,6 +175,32 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ══════════════════════════════════════════════════════════
+           JUDGE DEMO BANNER  —  blatant, impossible to miss
+         ══════════════════════════════════════════════════════════ */}
+      <Link href="/demo" style={{ display:'block',textDecoration:'none',marginBottom:28 }}>
+        <div className="judge-btn" style={{
+          borderRadius:20,
+          padding:'22px 28px',
+          background:'linear-gradient(135deg,#f97316,#ef4444)',
+          border:'2px solid #fb923c',
+          cursor:'pointer',
+          textAlign:'center',
+        }}>
+          <div style={{ fontSize:13,fontWeight:700,color:'#fff8',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:6 }}>⏱ For SBI GFF 2026 Judges</div>
+          <div style={{ fontSize:26,fontWeight:900,color:'#fff',lineHeight:1.2,marginBottom:8 }}>
+            🚀 Launch Judge Demo — 5-Minute Walkthrough
+          </div>
+          <div style={{ fontSize:13,color:'rgba(255,255,255,0.85)',maxWidth:560,margin:'0 auto 12px',lineHeight:1.5 }}>
+            One click → see a farmer enrolled, oracle triggered, AI quorum vote, blockchain commit &amp; IMPS payout — no login, no navigation, no friction.
+          </div>
+          <div style={{ display:'inline-flex',alignItems:'center',gap:8,background:'rgba(0,0,0,0.25)',borderRadius:10,padding:'8px 20px',fontSize:13,fontWeight:700,color:'#fff' }}>
+            Start Demo Now →
+          </div>
+        </div>
+      </Link>
+
+      {/* ── Stats grid ── */}
       <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:24 }} className="g6">
         {STATS.map((s,i)=>(
           <div key={i} className="glass text-center" style={{ padding:'16px 10px' }}>
