@@ -36,6 +36,10 @@ interface TrainMetrics {
   confusion_matrix?:{ tp:number; fp:number; tn:number; fn:number };
 }
 
+// Hoisted here — SWC JSX parser rejects `type` aliases declared inside arrow function bodies
+type RawContrib = { raw_contrib:number; pct_contrib:number; direction:string; importance:number };
+type FeatImportRow = { feature:string; importance:number };
+
 const CROPS     = ['paddy','cotton','wheat','soybean','groundnut','sugarcane','maize','chilli','tomato','onion'];
 const PLANS     = ['Basic Protect','Smart Shield','Full Season Pro'];
 const EVENTS    = ['drought','flood','heatwave','cyclone'];
@@ -348,15 +352,11 @@ export default function DemoPage() {
     stopTimer(); setLoading(false);
   };
 
-  // ── doML: flat brace structure — avoids SWC miscount of nested if+try+try ──
   const doML = async () => {
     setLoading(true); setError(''); startTimer();
     try {
-      // 1. Oracle feed
-      const fd   = await (await fetch('/api/oracle/feed')).json();
-      const row  = fd.districts?.[0];
-
-      // 2. Predict — only if we have a sensor row
+      const fd  = await (await fetch('/api/oracle/feed')).json();
+      const row = fd.districts?.[0];
       if (row) {
         const pred = await post('/api/ml/predict', {
           district:          row.district,
@@ -365,16 +365,13 @@ export default function DemoPage() {
           rainfall_mm:       row.rainfall_mm,
           soil_moisture_pct: row.soil_moisture,
         });
-
-        // 3. Adapt predict → MLResult
-        type RawContrib = { raw_contrib:number; pct_contrib:number; direction:string; importance:number };
         const contributions = (pred.contributions ?? {}) as Record<string, RawContrib>;
         const log_likelihoods: Record<string,{llr:number;weight:string;label:string}> = {};
         for (const [feat, c] of Object.entries(contributions)) {
           log_likelihoods[feat] = {
-            llr:    +c.raw_contrib.toFixed(3),
-            weight: `${(c.importance * 100).toFixed(1)}%`,
-            label:  c.direction ?? (c.raw_contrib > 0 ? 'risk↑' : 'risk↓'),
+            llr:    +(c as RawContrib).raw_contrib.toFixed(3),
+            weight: `${((c as RawContrib).importance * 100).toFixed(1)}%`,
+            label:  (c as RawContrib).direction ?? ((c as RawContrib).raw_contrib > 0 ? 'risk↑' : 'risk↓'),
           };
         }
         const total_llr      = +(pred.raw_score ?? 0).toFixed(3);
@@ -383,7 +380,6 @@ export default function DemoPage() {
         const modelStr: string = modelObj.name
           ? `${modelObj.name} v${modelObj.version} · ${modelObj.rounds} rounds · AUC ${modelObj.roc_auc}`
           : String(modelObj);
-
         setMl({
           risk_score:     pred.risk_score,
           risk_level:     pred.risk_level,
@@ -396,8 +392,6 @@ export default function DemoPage() {
           recommendation: pred.recommendation ?? '',
         });
       }
-
-      // 4. Train metrics — non-critical, swallow errors
       const tdRaw = await fetch('/api/ml/train').then(r => r.json()).catch(() => null);
       if (tdRaw) {
         const gb = tdRaw.final_metrics?.GradientBoosting ?? {};
@@ -416,8 +410,8 @@ export default function DemoPage() {
             val_rows:      ds.test_samples  ?? 0,
             feature_count: tdRaw.config?.n_features ?? 6,
           },
-          feature_importance: ((tdRaw.feature_importances ?? []) as {feature:string;importance:number}[])
-            .map(f => ({ feature: f.feature, importance: f.importance })),
+          feature_importance: (tdRaw.feature_importances ?? [] as FeatImportRow[])
+            .map((f: FeatImportRow) => ({ feature: f.feature, importance: f.importance })),
           confusion_matrix: cm ? { tp:cm.tp, fp:cm.fp, tn:cm.tn, fn:cm.fn } : undefined,
         });
       }
@@ -519,7 +513,7 @@ export default function DemoPage() {
                 <div style={{ marginBottom:10 }}><Label>{hindi?'फसल':'Crop'}</Label><select value={form.crop} onChange={e=>setForm(f=>({...f,crop:e.target.value}))} style={inp()}>{CROPS.map(c=><option key={c}>{c}</option>)}</select></div>
                 <div style={{ marginBottom:10 }}><Label>{hindi?'बीमा योजना':'Insurance Plan'}</Label><select value={form.plan} onChange={e=>setForm(f=>({...f,plan:e.target.value}))} style={inp()}>{PLANS.map(p=><option key={p}>{p}</option>)}</select></div>
                 <div style={{ marginBottom:14 }}><Label>Demo State Path</Label><select value={forceState} onChange={e=>setForceState(e.target.value as ForceState)} style={inp()}><option value=''>Normal EXECUTED path</option><option value='FRAUD_REVIEW'>Force FRAUD_REVIEW</option><option value='REJECTED'>Force REJECTED</option></select></div>
-                <div style={{ background:forceState==='FRAUD_REVIEW'?'#1c0a00':forceState==='REJECTED'?'#2d0a0a':'#052e16',border:`1px solid ${forceState==='FRAUD_REVIEW'?'#9a3412':forceState==='REJECTED'?'#7f1d1d':'#166534'}`,borderRadius:10,padding:'12px 14px' }}>
+                <div style={{ background:forceState==='FRAUD_REVIEW'?'#1c0a00':forceState==='REJECTED'?'#2d0a0a':'#052e16',border:`1px solid ${forceState==='FRAUD_REVIEW'?'#9a3412':forceState==='REJECTED'?'#7f1d1d':'#166634'}`,borderRadius:10,padding:'12px 14px' }}>
                   <div style={{ fontSize:10,color:forceState==='FRAUD_REVIEW'?'#f97316':forceState==='REJECTED'?'#f87171':'#4ade80',fontWeight:700,marginBottom:5,letterSpacing:'0.04em' }}>📊 DEMO MODE</div>
                   <div style={{ fontSize:12,color:'#94a3b8' }}>{forceState==='FRAUD_REVIEW'?'Shows orange review path before final settlement.':forceState==='REJECTED'?'Shows failed transition and claim rejection path.':'Shows standard TRIGGERED → EXECUTED payout flow.'}</div>
                 </div>
