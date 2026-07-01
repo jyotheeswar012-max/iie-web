@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import OfflineBoot from './OfflineBoot';
 
 type Step = 'enroll'|'verify'|'execute'|'audit'|'ml';
 type CState = 'ACTIVE'|'TRIGGERED'|'FRAUD_REVIEW'|'EXECUTED'|'REJECTED';
@@ -343,7 +344,7 @@ export default function DemoPage() {
     return d;
   };
 
-  const doRamesh = async () => {
+  const doRamesh = useCallback(async () => {
     const f = { name:'Ramesh Kumar', aadhaar_last4:'4821', district:'Barmer', state:'Rajasthan', crop:'wheat', acreage:'4.5', plan:'Smart Shield', event_type:'drought' };
     setForm(f); setPolicy(null); setVerify(null); setExecute(null); setAudit(null); setMl(null); setTrain(null); setError(''); setStep('enroll');
     setLoading(true); startTimer();
@@ -358,7 +359,8 @@ export default function DemoPage() {
       ping();
     } catch(e:unknown) { setError(e instanceof Error?e.message:'Error'); }
     stopTimer(); setLoading(false);
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceState, ping]);
 
   const doEnroll = async () => {
     setLoading(true); setError(''); startTimer();
@@ -482,6 +484,11 @@ export default function DemoPage() {
     <div style={{ minHeight:'100vh',background:'#030712',fontFamily:"'Inter',system-ui,sans-serif",color:'#e2e8f0' }}>
       {/* PAGE_CSS is a plain string const — avoids SWC JSX bug with `@keyframes x { y{} }` braces */}
       <style>{PAGE_CSS}</style>
+
+      {/* Auto-boot: if ?offline=1 is in URL, fire doRamesh() once on mount */}
+      <Suspense fallback={null}>
+        <OfflineBoot onOffline={doRamesh} />
+      </Suspense>
 
       {showModal && execute && <ClaimModal exec={execute} onClose={()=>setShowModal(false)} hindi={hindi} />}
 
