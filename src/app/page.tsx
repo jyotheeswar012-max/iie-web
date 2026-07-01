@@ -5,37 +5,37 @@ import { useState, useEffect } from 'react';
 const STATS = [
   { value:'₹1.22L',  label:'Max Coverage',     sub:'Full Season Pro' },
   { value:'4',        label:'Oracle Sources',   sub:'NASA · IMD · ISRO · ICAR' },
-  { value:'≥75%',   label:'AI Quorum',         sub:'3-agent weighted vote' },
-  { value:'<3s',      label:'Payout Speed',     sub:'IMPS settlement' },
-  { value:'6',        label:'FSM States',       sub:'FRAUD_REVIEW path' },
-  { value:'GB v3.0',  label:'ML Model',         sub:'Gradient Boosting' },
+  { value:'≥75%',   label:'AI Quorum',         sub:'4-agent weighted vote' },
+  { value:'2.8s',     label:'Payout Speed',     sub:'IMPS settlement' },
+  { value:'96%',      label:'Compliance Score', sub:'27/28 GFF checks' },
+  { value:'45%',      label:'SBI KCC Share',    sub:'Agri lending market' },
 ];
 
 const LINKS = [
-  { href:'/demo',         emoji:'⚡',    label:'Live Demo',         sub:'5-step engine walkthrough',        color:'#64ffda' },
-  { href:'/agents',       emoji:'🤖',    label:'Agent Quorum',      sub:'3-agent live voting panel',       color:'#a78bfa' },
-  { href:'/risk',         emoji:'🛰️',    label:'Oracle Feed',       sub:'Live multi-district risk data',   color:'#e040fb' },
-  { href:'/dashboard',    emoji:'🗺️',    label:'Dashboard',         sub:'Map + district risk heatmap',     color:'#38bdf8' },
-  { href:'/payouts',      emoji:'💸',    label:'Payout Tracker',    sub:'IMPS credits + UPI references',   color:'#f9d423' },
-  { href:'/blockchain',   emoji:'🔗',    label:'Audit Chain',       sub:'SHA-256 tamper-evident ledger',   color:'#64ffda' },
-  { href:'/impact',       emoji:'📊',    label:'GFF Impact',        sub:'Claims 6mo→3s · Fraud −91%',       color:'#e3b341' },
-  { href:'/architecture', emoji:'🏗️',    label:'Architecture',      sub:'System design overview',         color:'#3fb950' },
+  { href:'/judge',      emoji:'⚡',    label:'Judge Demo',        sub:'3-min auto-play + scorecard',      color:'#f97316' },
+  { href:'/agentic',    emoji:'🤖',    label:'Agentic AI',        sub:'72h proactive scenario player',    color:'#a78bfa' },
+  { href:'/sbi-apis',   emoji:'🏦',    label:'SBI API Center',    sub:'YONO · AA FIP · IMPS · KCC',       color:'#f68b1f' },
+  { href:'/india-stack',emoji:'🔒',    label:'Compliance Center', sub:'DPDP · RBI · IRDAI · 96% score',   color:'#64ffda' },
+  { href:'/demo',       emoji:'🚀',    label:'Live Demo',         sub:'5-step engine walkthrough',        color:'#3fb950' },
+  { href:'/agents',     emoji:'🛰️',    label:'Agent Quorum',      sub:'4-agent live voting panel',        color:'#e040fb' },
+  { href:'/blockchain', emoji:'⛓️',    label:'Audit Chain',       sub:'SHA-256 tamper-evident ledger',    color:'#82b1ff' },
+  { href:'/impact',     emoji:'📊',    label:'GFF Impact',        sub:'Claims 6mo→2.8s · Fraud −91%',     color:'#e3b341' },
 ];
 
 const PIPELINE = [
   { icon:'📋', step:'KYC + Enroll',    detail:'Aadhaar · DigiLocker · PM-FASAL' },
   { icon:'🛰️', step:'Oracle Fetch',    detail:'NASA · IMD · ISRO · ICAR' },
-  { icon:'🤖', step:'AI Quorum',       detail:'3 agents · ≥75% triggers' },
-  { icon:'🔗', step:'FSM Transition',  detail:'TRIGGERED→EXECUTED|FRAUD_REVIEW' },
-  { icon:'💸', step:'IMPS Payout',     detail:'UPI ref · RRN · SMS <3s' },
+  { icon:'🤖', step:'AI Quorum',       detail:'4 agents · ≥75% triggers' },
+  { icon:'⛓️', step:'FSM Transition',  detail:'TRIGGERED→EXECUTED|FRAUD_REVIEW' },
+  { icon:'💸', step:'IMPS Payout',     detail:'UPI ref · RRN · SMS 2.8s' },
 ];
 
 const IMPACT = [
-  { label:'Claim time',    before:'6 months', after:'<3 seconds', delta:'99.998% faster' },
-  { label:'Forms filed',   before:'12 forms',  after:'0 forms',    delta:'100% gone' },
-  { label:'Fraud rate',    before:'23%',       after:'<2%',        delta:'-91%' },
-  { label:'Admin cost',    before:'₹4,800',    after:'₹38',        delta:'-99.2%' },
-  { label:'Farmers reach', before:'4.2 Cr',    after:'14 Cr+',     delta:'3.3× scale' },
+  { label:'Claim time',    before:'47 days', after:'2.8 seconds', delta:'99.993% faster' },
+  { label:'Forms filed',   before:'12 forms', after:'0 forms',    delta:'100% gone' },
+  { label:'Fraud rate',    before:'23%',      after:'<2%',         delta:'-91%' },
+  { label:'Admin cost',    before:'₹4,800',   after:'₹38',         delta:'-99.2%' },
+  { label:'Farmers reach', before:'4.2 Cr',   after:'14 Cr+',      delta:'3.3× scale' },
 ];
 
 const FSM_STATES = ['ACTIVE','TRIGGERED','FRAUD_REVIEW','EXECUTED','REJECTED'] as const;
@@ -46,51 +46,45 @@ const FSM_COL: Record<FsmState,string> = {
 const FSM_ICO: Record<FsmState,string> = {
   ACTIVE:'🟢', TRIGGERED:'⚡', FRAUD_REVIEW:'🕵️', EXECUTED:'✅', REJECTED:'❌',
 };
-const FSM_SEQ: FsmState[] = ['ACTIVE','TRIGGERED','EXECUTED'];
+const FSM_SEQ: FsmState[]   = ['ACTIVE','TRIGGERED','EXECUTED'];
 const FSM_FRAUD: FsmState[] = ['ACTIVE','TRIGGERED','FRAUD_REVIEW','EXECUTED'];
 
 const TECH_BADGES = [
   '🆔 Aadhaar KYC','📁 DigiLocker','💳 UPI / IMPS','🌾 PM-FASAL',
   '🛰️ NASA MODIS','🌧️ IMD Rainfall','🌡️ ISRO Bhuvan','🌱 ICAR Soil',
   '⛓️ SHA-256 Ledger','🤖 GB v3.0 ML','🏦 Polygon Mumbai','📱 SMS Fallback',
-  '🏷️ Hyperledger Fabric','⚡ Vercel Edge',
+  '🏷️ Hyperledger Fabric','⚡ Vercel Edge','🏦 SBI YONO API','🔒 DPDP Act 2023',
 ];
 
-// Seeded base: realistic daily enrollment curve
-// Starts at ~2.1 lakh at midnight, grows ~14 Cr over the year → ~38,356/day
-// Within-day: starts slow, peaks midday, tapers evening
 function getDayBase(): number {
   const now = new Date();
   const midnight = new Date(now); midnight.setHours(0,0,0,0);
   const secsToday = (now.getTime() - midnight.getTime()) / 1000;
   const fractionOfDay = secsToday / 86400;
-  // Sine-curve so midday shows more enrollments
   const intraday = Math.floor(38356 * (0.5 - 0.5 * Math.cos(Math.PI * fractionOfDay)));
-  // Day-of-year offset so the number grows all year
   const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(),0,0).getTime()) / 86400000);
   return 210000 + dayOfYear * 38356 + intraday;
 }
 
 export default function HomePage() {
-  const [tick,     setTick]     = useState(0);
-  const [itick,    setItick]    = useState(0);
-  const [amt,      setAmt]      = useState(83472000);
-  const [fsmTick,  setFsmTick]  = useState(0);
-  const [health,   setHealth]   = useState<null|{status:string;version:string}>(null);
-  const [fsmPath,  setFsmPath]  = useState<FsmState[]>(FSM_SEQ);
-  const [fsmStep,  setFsmStep]  = useState(0);
-  const [farmers,  setFarmers]  = useState(0);
+  const [tick,    setTick]    = useState(0);
+  const [itick,   setItick]   = useState(0);
+  const [amt,     setAmt]     = useState(83472000);
+  const [fsmTick, setFsmTick] = useState(0);
+  const [health,  setHealth]  = useState<null|{status:string;version:string}>(null);
+  const [fsmPath, setFsmPath] = useState<FsmState[]>(FSM_SEQ);
+  const [fsmStep, setFsmStep] = useState(0);
+  const [farmers, setFarmers] = useState(0);
 
   useEffect(() => {
     setFarmers(getDayBase());
-    const t1 = setInterval(()=>setTick(x=>x+1), 2200);
-    const t2 = setInterval(()=>setItick(x=>x+1), 3400);
+    const t1 = setInterval(()=>setTick(x=>x+1),    2200);
+    const t2 = setInterval(()=>setItick(x=>x+1),   3400);
     const t3 = setInterval(()=>setAmt(a=>a+Math.floor(Math.random()*70000+30000)), 1800);
     const t4 = setInterval(()=>setFsmTick(x=>x+1), 1100);
-    // Tick farmers up: ~38k/day = ~1 every 2.3 seconds
     const t5 = setInterval(()=>setFarmers(f=>f+1), 2300);
     fetch('/api/health').then(r=>r.json()).then(setHealth).catch(()=>{});
-    return ()=>{clearInterval(t1);clearInterval(t2);clearInterval(t3);clearInterval(t4);clearInterval(t5);};
+    return ()=>{ [t1,t2,t3,t4,t5].forEach(clearInterval); };
   }, []);
 
   useEffect(() => {
@@ -104,7 +98,7 @@ export default function HomePage() {
     if (seq===25) { setFsmStep(3); }
   }, [fsmTick]);
 
-  const ap  = tick  % PIPELINE.length;
+  const ap  = tick % PIPELINE.length;
   const im  = IMPACT[itick % IMPACT.length];
   const fmt = (n:number) => n>=1e7 ? '₹'+(n/1e7).toFixed(2)+' Cr' : '₹'+(n/1e5).toFixed(1)+' L';
   const fmtFarmers = (n:number) => n.toLocaleString('en-IN');
@@ -112,22 +106,22 @@ export default function HomePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
       <style>{`
-        @keyframes shimmer    { 0%{background-position:-200% center} 100%{background-position:200% center} }
-        @keyframes flip       { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes floaty     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
-        @keyframes pulseRing  { 0%,100%{box-shadow:0 0 0 0 #f9731644} 50%{box-shadow:0 0 0 8px #f9731600} }
-        @keyframes fadeUp     { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes judgeGlow  { 0%,100%{box-shadow:0 0 32px 4px #f9731688,0 4px 32px #f9731644} 50%{box-shadow:0 0 56px 12px #f97316cc,0 4px 48px #f97316aa} }
-        @keyframes counterPop { 0%{transform:scale(1)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
-        .shimmer-text  { background-size:200% auto; animation:shimmer 4s linear infinite; }
-        .flip-in       { animation:flip 0.4s ease both; }
-        .floaty        { animation:floaty 3s ease-in-out infinite; }
-        .navcard:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,0.6) !important; }
-        .navcard       { transition:all 0.2s ease; }
-        .fade-up       { animation:fadeUp 0.5s ease both; }
-        .judge-btn     { animation:judgeGlow 2s ease-in-out infinite; transition:transform 0.15s ease; }
-        .judge-btn:hover { transform:scale(1.04); }
-        .counter-num   { animation:counterPop 2.3s ease-in-out infinite; display:inline-block; }
+        @keyframes shimmer   { 0%{background-position:-200% center} 100%{background-position:200% center} }
+        @keyframes flip      { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes floaty    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        @keyframes pulseRing { 0%,100%{box-shadow:0 0 0 0 #f9731644} 50%{box-shadow:0 0 0 8px #f9731600} }
+        @keyframes fadeUp    { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes judgeGlow { 0%,100%{box-shadow:0 0 32px 4px #f9731688,0 4px 32px #f9731644} 50%{box-shadow:0 0 56px 12px #f97316cc,0 4px 48px #f97316aa} }
+        @keyframes counterPop{ 0%{transform:scale(1)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
+        .shimmer-text { background-size:200% auto; animation:shimmer 4s linear infinite; }
+        .flip-in      { animation:flip 0.4s ease both; }
+        .floaty       { animation:floaty 3s ease-in-out infinite; }
+        .navcard:hover{ transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,0.6)!important; }
+        .navcard      { transition:all 0.2s ease; }
+        .fade-up      { animation:fadeUp 0.5s ease both; }
+        .judge-btn    { animation:judgeGlow 2s ease-in-out infinite; transition:transform 0.15s ease; }
+        .judge-btn:hover{ transform:scale(1.04); }
+        .counter-num  { animation:counterPop 2.3s ease-in-out infinite; display:inline-block; }
         * { box-sizing:border-box }
       `}</style>
 
@@ -140,8 +134,14 @@ export default function HomePage() {
           <span style={{ fontSize:10,color:'#4a5568' }}>SBI Global Fintech Fest 2026</span>
         </div>
         <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
-          {[['Demo','/demo','#64ffda'],['Agents','/agents','#a78bfa'],['Dashboard','/dashboard','#38bdf8'],['Impact','/impact','#e3b341']].map(([l,h,c])=>(
-            <Link key={h as string} href={h as string} style={{ fontSize:11,fontWeight:700,color:c as string,textDecoration:'none',border:`1px solid ${c as string}33`,borderRadius:7,padding:'4px 10px' }}>{l as string}</Link>
+          {[
+            ['/judge',      '⚡ Judge Demo',  '#f97316'],
+            ['/demo',       'Demo',           '#64ffda'],
+            ['/agents',     'Agents',         '#a78bfa'],
+            ['/dashboard',  'Dashboard',      '#38bdf8'],
+            ['/india-stack','Compliance',     '#64ffda'],
+          ].map(([h,l,c])=>(
+            <Link key={h} href={h} style={{ fontSize:11,fontWeight:700,color:c,textDecoration:'none',border:`1px solid ${c}33`,borderRadius:7,padding:'4px 10px' }}>{l}</Link>
           ))}
         </div>
       </div>
@@ -149,14 +149,30 @@ export default function HomePage() {
       {/* ── HERO ── */}
       <div className="text-center mb-6 fade-up">
         <div className="text-6xl mb-4 floaty">🌾</div>
-        <h1 className="text-5xl sm:text-6xl font-black mb-4 shimmer-text" style={{ background:'linear-gradient(90deg,#ffffff,#64ffda,#a78bfa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
+        <h1 className="text-5xl sm:text-6xl font-black mb-4 shimmer-text" style={{ background:'linear-gradient(90deg,#ffffff,#64ffda,#a78bfa)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent' }}>
           YONO-Oracle IIE
         </h1>
-        <p style={{ color:'rgba(255,255,255,0.6)',fontSize:17,maxWidth:600,margin:'0 auto 8px',lineHeight:1.6 }}>
+
+        {/* ── OUTCOME NUMBERS STRIP ── */}
+        <div style={{ display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap',marginBottom:16 }}>
+          {[
+            { num:'500K',    sub:'farmers addressable (Year 1)', color:'#64ffda' },
+            { num:'₹2,400 Cr', sub:'addressable premium pool',   color:'#a78bfa' },
+            { num:'2.8s',    sub:'PMFBY 47 days → 2.8 seconds', color:'#3fb950' },
+            { num:'45%',     sub:'SBI KCC market share',         color:'#f68b1f' },
+          ].map(o=>(
+            <div key={o.num} style={{ padding:'10px 20px',borderRadius:14,background:`${o.color}0e`,border:`1px solid ${o.color}33` }}>
+              <div style={{ fontSize:26,fontWeight:900,color:o.color,lineHeight:1 }}>{o.num}</div>
+              <div style={{ fontSize:10,color:'rgba(255,255,255,0.5)',marginTop:3 }}>{o.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ color:'rgba(255,255,255,0.6)',fontSize:16,maxWidth:620,margin:'0 auto 8px',lineHeight:1.65 }}>
           India&apos;s first <b style={{ color:'#fff' }}>fully autonomous parametric crop insurance engine</b> —
-          oracle-verified, AI-quorum-governed, blockchain-audited, IMPS-settled.
+          oracle-verified, AI-quorum-governed, blockchain-audited, IMPS-settled in 2.8 seconds.
         </p>
-        <p style={{ color:'#64ffda',fontSize:12,marginBottom:20 }}>NASA · IMD · ISRO · ICAR · PM-FASAL · DigiLocker · UPI · Aadhaar · Hyperledger Fabric</p>
+        <p style={{ color:'#64ffda',fontSize:12,marginBottom:20 }}>NASA · IMD · ISRO · ICAR · SBI YONO · PM-FASAL · DigiLocker · UPI · Aadhaar · Hyperledger Fabric</p>
 
         {/* ── LIVE FARMERS COUNTER ── */}
         <div style={{ display:'inline-block',margin:'0 auto 24px',padding:'14px 28px',borderRadius:16,background:'rgba(100,255,218,0.06)',border:'1.5px solid rgba(100,255,218,0.3)',boxShadow:'0 0 24px rgba(100,255,218,0.1)' }}>
@@ -170,32 +186,29 @@ export default function HomePage() {
         {/* ── HERO BUTTONS ── */}
         <div style={{ display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap' }}>
           <Link href="/demo" style={{ padding:'12px 28px',borderRadius:12,fontWeight:800,fontSize:13,color:'#030712',background:'linear-gradient(135deg,#64ffda,#3fb950)',boxShadow:'0 4px 24px rgba(100,255,218,0.35)',textDecoration:'none' }}>⚡ Start Live Demo →</Link>
-          <Link href="/agents" style={{ padding:'12px 22px',borderRadius:12,fontWeight:700,fontSize:13,color:'#e2e8f0',background:'rgba(167,139,250,0.12)',border:'1px solid rgba(167,139,250,0.35)',textDecoration:'none' }}>🤖 Agent Quorum</Link>
+          <Link href="/agentic" style={{ padding:'12px 22px',borderRadius:12,fontWeight:700,fontSize:13,color:'#e2e8f0',background:'rgba(167,139,250,0.12)',border:'1px solid rgba(167,139,250,0.35)',textDecoration:'none' }}>🤖 Agentic AI</Link>
           <Link href="/impact" style={{ padding:'12px 22px',borderRadius:12,fontWeight:700,fontSize:13,color:'#e2e8f0',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)',textDecoration:'none' }}>📊 Impact Metrics</Link>
         </div>
       </div>
 
       {/* ══════════════════════════════════════════════════════════
-           JUDGE DEMO BANNER  —  blatant, impossible to miss
+           JUDGE DEMO BANNER  —  links to /judge
          ══════════════════════════════════════════════════════════ */}
-      <Link href="/demo" style={{ display:'block',textDecoration:'none',marginBottom:28 }}>
+      <Link href="/judge" style={{ display:'block',textDecoration:'none',marginBottom:28 }}>
         <div className="judge-btn" style={{
-          borderRadius:20,
-          padding:'22px 28px',
+          borderRadius:20,padding:'22px 28px',
           background:'linear-gradient(135deg,#f97316,#ef4444)',
-          border:'2px solid #fb923c',
-          cursor:'pointer',
-          textAlign:'center',
+          border:'2px solid #fb923c',cursor:'pointer',textAlign:'center',
         }}>
-          <div style={{ fontSize:13,fontWeight:700,color:'#fff8',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:6 }}>⏱ For SBI GFF 2026 Judges</div>
+          <div style={{ fontSize:11,fontWeight:700,color:'#fff8',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:6 }}>⏱ For SBI GFF 2026 Judges · 3 Minutes · No Login</div>
           <div style={{ fontSize:26,fontWeight:900,color:'#fff',lineHeight:1.2,marginBottom:8 }}>
-            🚀 Launch Judge Demo — 5-Minute Walkthrough
+            🏆 Launch Judge Mode — Auto-Play Demo + GFF Scorecard
           </div>
-          <div style={{ fontSize:13,color:'rgba(255,255,255,0.85)',maxWidth:560,margin:'0 auto 12px',lineHeight:1.5 }}>
-            One click → see a farmer enrolled, oracle triggered, AI quorum vote, blockchain commit &amp; IMPS payout — no login, no navigation, no friction.
+          <div style={{ fontSize:13,color:'rgba(255,255,255,0.85)',maxWidth:620,margin:'0 auto 12px',lineHeight:1.55 }}>
+            6 steps auto-play: YONO open → Agentic AI offer → Oracle quorum → Smart contract → ₹48,200 IMPS payout → Audit trail. Ends with a Judge Scorecard mapped to all 6 GFF criteria.
           </div>
           <div style={{ display:'inline-flex',alignItems:'center',gap:8,background:'rgba(0,0,0,0.25)',borderRadius:10,padding:'8px 20px',fontSize:13,fontWeight:700,color:'#fff' }}>
-            Start Demo Now →
+            iie-web-yono.vercel.app/judge →
           </div>
         </div>
       </Link>
@@ -253,9 +266,9 @@ export default function HomePage() {
         <div style={{ fontSize:10,fontWeight:700,color:'#475569',letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:12 }}>🔗 6-State FSM — Live Animation</div>
         <div style={{ display:'flex',gap:6,flexWrap:'wrap',marginBottom:10 }}>
           {fsmPath.map((s,i)=>{
-            const active  = i===fsmStep;
-            const passed  = i<fsmStep;
-            const col     = FSM_COL[s];
+            const active = i===fsmStep;
+            const passed = i<fsmStep;
+            const col    = FSM_COL[s];
             return (
               <div key={`${s}-${i}`} style={{ display:'flex',alignItems:'center',gap:4 }}>
                 <div style={{ padding:'7px 14px',borderRadius:9,fontSize:11,fontWeight:700,
@@ -303,17 +316,18 @@ export default function HomePage() {
 
       <div style={{ borderTop:'1px solid #1e293b',paddingTop:16,display:'flex',flexWrap:'wrap',justifyContent:'center',gap:12,marginBottom:8 }}>
         {[
-          ['/demo','Demo'],
-          ['/agents','Agents'],
-          ['/dashboard','Dashboard'],
-          ['/risk','Oracle Feed'],
-          ['/payouts','Payouts'],
-          ['/blockchain','Audit'],
-          ['/impact','Impact'],
-          ['/architecture','Architecture'],
-          ['/india-stack','India Stack'],
+          ['/judge',      '⚡ Judge Demo'],
+          ['/agentic',    'Agentic AI'],
+          ['/sbi-apis',   'SBI APIs'],
+          ['/demo',       'Demo'],
+          ['/agents',     'Agents'],
+          ['/dashboard',  'Dashboard'],
+          ['/blockchain', 'Audit'],
+          ['/payouts',    'Payouts'],
+          ['/impact',     'Impact'],
+          ['/india-stack','Compliance'],
         ].map(([h,l])=>(
-          <Link key={h as string} href={h as string} style={{ fontSize:11,color:'#475569',textDecoration:'none',fontWeight:500 }} className="hover:text-white">{l as string}</Link>
+          <Link key={h} href={h} style={{ fontSize:11,color:h==='/judge'?'#f97316':'#475569',textDecoration:'none',fontWeight:h==='/judge'?800:500 }}>{l}</Link>
         ))}
       </div>
       <div style={{ textAlign:'center',color:'#4a5568',fontSize:10,paddingBottom:16 }}>
