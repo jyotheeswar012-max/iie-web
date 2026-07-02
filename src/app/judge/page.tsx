@@ -21,77 +21,55 @@ const C = {
 };
 
 // ─────────────────────────────────────────────────────────────────
-// VOICEOVER SCRIPTS  —  business-value narration, one per step
-// Written for a noisy demo hall: short sentences, pauses via commas,
-// key numbers spoken aloud so a judge can hear without looking.
+// VOICEOVER SCRIPTS
 // ─────────────────────────────────────────────────────────────────
 const VOICEOVER: string[] = [
-  // Step 1 — YONO Open
-  `Step 1. The farmer opens YONO Kisan on his mobile phone. 
-   IIE calls SBI's YONO Session API and validates his identity in 43 milliseconds. 
-   There is no paper form. There is no branch visit. 
-   Aadhaar KYC was completed once when he opened his SBI account — IIE reuses it. 
-   This is how SBI's 100 million YONO users become IIE candidates from day one, 
+  `Step 1. The farmer opens YONO Kisan on his mobile phone.
+   IIE calls SBI's YONO Session API and validates his identity in 43 milliseconds.
+   There is no paper form. There is no branch visit.
+   Aadhaar KYC was completed once when he opened his SBI account — IIE reuses it.
+   This is how SBI's 100 million YONO users become IIE candidates from day one,
    with zero new customer acquisition cost.`,
 
-  // Step 2 — Agentic AI Offer
-  `Step 2. This is where IIE becomes truly agentic. 
-   The AI has been monitoring Barmer district for 72 hours. 
-   Crop stress index — called NDVI — has dropped to 0.21. 
-   The danger threshold is 0.35. 
-   Rainfall forecast is only 7 millimetres over the next 10 days. 
-   The AI does not wait for the farmer to search for insurance. 
-   It pushes a personalised offer directly to his YONO home screen, 
-   18 hours before the predicted drought window opens. 
-   The net premium, after the government's 30 percent PM-FASAL subsidy, is just 2,340 rupees. 
-   Compare this to PMFBY, where the farmer must visit a branch, fill a form, and wait.`,
+  `Step 2. This is where IIE becomes truly agentic.
+   The AI has been monitoring Barmer district for 72 hours.
+   Crop stress index — called NDVI — has dropped to 0.21.
+   The danger threshold is 0.35.
+   Rainfall forecast is only 7 millimetres over the next 10 days.
+   The AI does not wait for the farmer to search for insurance.
+   It pushes a personalised offer directly to his YONO home screen,
+   18 hours before the predicted drought window opens.
+   The net premium, after the government's 30 percent PM-FASAL subsidy, is just 2,340 rupees.`,
 
-  // Step 3 — Oracle Quorum
-  `Step 3. Three weeks later, the drought window opens. 
-   IIE's Oracle Quorum engine queries all four sovereign government data sources simultaneously: 
-   NASA satellite imagery, the India Meteorological Department, ISRO's Bhuvan platform, and ICAR soil sensors. 
-   All four confirm the drought. 
-   The quorum consensus score is 94 percent — well above the 75 percent trigger threshold. 
-   This entire verification takes 1.2 seconds. 
-   Under PMFBY, a human adjuster would need 30 to 45 days to conduct a manual field survey. 
-   No human is involved here. No claim form. The smart contract receives the trigger signal automatically.`,
+  `Step 3. Three weeks later, the drought window opens.
+   IIE's Oracle Quorum engine queries all four sovereign government data sources simultaneously.
+   All four confirm the drought.
+   The quorum consensus score is 94 percent — well above the 75 percent trigger threshold.
+   This entire verification takes 1.2 seconds.
+   Under PMFBY, a human adjuster would need 30 to 45 days to conduct a manual field survey.`,
 
-  // Step 4 — Smart Contract
-  `Step 4. The oracle quorum result is written to Hyperledger Fabric — a permissioned blockchain. 
-   The smart contract reads the quorum vote, confirms the trigger condition, 
-   and transitions its state from TRIGGERED to EXECUTED. 
-   This creates an immutable audit record. 
-   IRDAI and RBI auditors can query this block using their permissioned key at any time, 
-   without asking IIE for a report. 
-   The entire execution takes 890 milliseconds. 
-   The gas cost on Polygon is approximately 9 paise per contract — practically zero at scale.`,
+  `Step 4. The oracle quorum result is written to an immutable audit chain.
+   The smart contract reads the quorum vote, confirms the trigger condition,
+   and transitions its state from TRIGGERED to EXECUTED.
+   IRDAI and RBI auditors can query this record using their permissioned key at any time.
+   The entire execution takes 890 milliseconds.`,
 
-  // Step 5 — IMPS Payout
-  `Step 5. The smart contract calls SBI's Payment Gateway API. 
-   SBI routes 48,200 rupees via NPCI's IMPS channel to the farmer's UPI address. 
-   The Reference Remittance Number is generated. 
-   The farmer receives an SMS confirmation. 
-   Total time from oracle trigger to money in the farmer's account: 2.8 seconds. 
-   PMFBY average payout time is 47 days. 
-   IIE is 99.99 percent faster. 
-   No competitor at this hackathon — and no other bank — can replicate this, 
-   because it runs on SBI's own NPCI Corporate Internet Banking channel, 
-   which only SBI can access.`,
+  `Step 5. The smart contract calls SBI's Payment Gateway API.
+   SBI routes 48,200 rupees via NPCI's IMPS channel to the farmer's UPI address.
+   The Reference Remittance Number is generated.
+   Total time from oracle trigger to money in the farmer's account: 2.8 seconds.
+   PMFBY average payout time is 47 days.`,
 
-  // Step 6 — Audit + KCC
-  `Step 6. Every event in this journey — the session validation, the quorum vote, 
-   the contract execution, and the payout — is permanently anchored on Hyperledger Fabric 
-   and retained for 7 years as required by the RBI IT Framework. 
-   Now watch what happens next. 
-   The payout improves the farmer's creditworthiness signal. 
-   IIE immediately calls SBI's Credit Assessment API and offers the farmer a KCC top-up of 40,000 rupees — 
-   inside the same YONO session, with no new application. 
-   No other insurer in India can do this, because no other insurer has access to SBI's KCC credit infrastructure. 
-   This is IIE's SBI-exclusive moat.`,
+  `Step 6. Every event in this journey is permanently anchored on an immutable audit chain
+   and retained for 7 years as required by the RBI IT Framework.
+   The payout improves the farmer's creditworthiness signal.
+   IIE immediately offers the farmer a KCC top-up of 40,000 rupees —
+   inside the same YONO session, with no new application.
+   No other insurer in India can do this.`,
 ];
 
 // ─────────────────────────────────────────────────────────────────
-// STEP DATA  (6 steps × ~30s each = ~3 min auto-play at 1×)
+// STEP DATA
 // ─────────────────────────────────────────────────────────────────
 interface DemoStep {
   id:        number;
@@ -123,12 +101,12 @@ const STEPS: DemoStep[] = [
     narrative:
       'Ramesh opens YONO Kisan on his Jio phone. IIE calls SBI\'s YONO Session API to validate his OAuth 2.0 token. KYC is already complete — no paper, no branch visit. His Aadhaar is stored as a SHA-256 hash; his name is tokenised. The system confirms he is an active SBI KCC holder with a clean repayment record.',
     dataPanel: [
-      { key: 'YONO Session API',       value: 'POST yono.sbi.co.in/api/v2/auth/introspect', highlight: true },
-      { key: 'Session Status',          value: 'ACTIVE  · scope: kisan_insurance' },
-      { key: 'KYC Level',               value: 'Full KYC (Aadhaar eKYC + CKYC)' },
-      { key: 'Aadhaar Hash',            value: 'SHA-256: a3f9...d821  (plaintext never stored)' },
-      { key: 'KCC Account',             value: 'SBI-KCC-00341  · Rs 1,20,000 limit  · Active' },
-      { key: 'YONO Response Time',      value: '43 ms' },
+      { key: 'YONO Session API',        value: 'POST yono.sbi.co.in/api/v2/auth/introspect', highlight: true },
+      { key: 'Session Status',           value: 'ACTIVE · scope: kisan_insurance' },
+      { key: 'KYC Level',                value: 'Full KYC (Aadhaar eKYC + CKYC)' },
+      { key: 'Aadhaar Hash',             value: 'SHA-256: a3f9...d821 (plaintext never stored)' },
+      { key: 'KCC Account',              value: 'SBI-KCC-00341 · Rs 1,20,000 limit · Active' },
+      { key: 'YONO Response Time',       value: '43 ms' },
     ],
     deepLink: { label: 'SBI API Center', href: '/sbi-apis' },
     gffCriteria: 'Customer Acquisition',
@@ -146,13 +124,13 @@ const STEPS: DemoStep[] = [
     narrative:
       'IIE\'s agentic layer has been monitoring Barmer district for 72 hours. NDVI has dropped to 0.21 (severe stress threshold: 0.35). IMD forecasts < 8 mm rainfall in the next 10 days. The AI does not wait for Ramesh to search for insurance — it pushes a personalised offer directly to his YONO home screen 18 hours before the predicted drought window opens.',
     dataPanel: [
-      { key: 'NDVI Score',              value: '0.21  (threshold: 0.35)', highlight: true },
-      { key: 'Rainfall Forecast (10d)', value: '7.3 mm  ·  IMD District Alert' },
-      { key: 'LST Anomaly',             value: '+6.2 deg C above seasonal baseline  ·  ISRO Bhuvan' },
-      { key: 'Soil Moisture',           value: '11%  ·  ICAR sensor cluster' },
-      { key: 'Risk Score',              value: '87 / 100  ·  CRITICAL' },
-      { key: 'AI Action',               value: 'Push offer sent to YONO  · 18h before window', highlight: true },
-      { key: 'Premium (net of subsidy)', value: 'Rs 2,340  (Rs 3,340 - 30% PM-FASAL)' },
+      { key: 'NDVI Score',               value: '0.21 (threshold: 0.35)', highlight: true },
+      { key: 'Rainfall Forecast (10d)',   value: '7.3 mm · IMD District Alert' },
+      { key: 'LST Anomaly',              value: '+6.2°C above seasonal baseline · ISRO Bhuvan' },
+      { key: 'Soil Moisture',            value: '11% · ICAR sensor cluster' },
+      { key: 'Risk Score',               value: '87 / 100 · CRITICAL' },
+      { key: 'AI Action',                value: 'Push offer sent to YONO · 18h before window', highlight: true },
+      { key: 'Premium (net of subsidy)', value: 'Rs 2,340 (Rs 3,340 − 30% PM-FASAL)' },
     ],
     deepLink: { label: 'Agentic AI Page', href: '/agentic' },
     gffCriteria: 'Agentic AI',
@@ -166,17 +144,17 @@ const STEPS: DemoStep[] = [
     color: C.teal,
     duration: 32000,
     actor: 'Oracle Quorum Engine',
-    actorSub: 'NASA MODIS 30% · IMD Rainfall 25% · ISRO Bhuvan 25% · ICAR Sensors 20%',
+    actorSub: 'NASA POWER 30% · IMD Rainfall 25% · Sentinel-2 NDVI 25% · ICAR Sensors 20%',
     narrative:
       'Ramesh accepts the offer. Three weeks later, the drought window opens. IIE\'s oracle quorum automatically re-evaluates. All four sovereign government data sources confirm the event. Quorum score: 94% — far above the 75% trigger threshold. No human adjuster. No claim form. The smart contract receives the trigger signal.',
     dataPanel: [
-      { key: 'NASA MODIS NDVI',         value: '0.18  ·  DROUGHT CONFIRMED', highlight: true },
-      { key: 'IMD 30-day Rainfall',     value: '6.1 mm  ·  < 20mm threshold' },
-      { key: 'ISRO Bhuvan LST',         value: '49.3 deg C  ·  > 45 deg C threshold' },
-      { key: 'ICAR Soil Moisture',      value: '9%  ·  < 15% threshold' },
-      { key: 'Quorum Score',            value: '94%  ·  TRIGGER APPROVED', highlight: true },
-      { key: 'Consensus Time',          value: '1.2 seconds' },
-      { key: 'Data Sources',            value: 'All public-domain sovereign APIs  ·  No PII' },
+      { key: 'NASA POWER Rainfall',      value: '6.1 mm / 7d · DROUGHT CONFIRMED', highlight: true },
+      { key: 'IMD 30-day Rainfall',      value: '6.1 mm · < 20 mm threshold (simulated)' },
+      { key: 'Sentinel-2 NDVI',          value: '0.18 · < 0.28 threshold (simulated)' },
+      { key: 'ICAR Soil Moisture',       value: '9% · < 15% threshold (simulated)' },
+      { key: 'Quorum Score',             value: '94% · TRIGGER APPROVED', highlight: true },
+      { key: 'Consensus Time',           value: '1.2 seconds' },
+      { key: 'Oracle-1 status',          value: '🟢 LIVE — NASA POWER MERRA-2 real data' },
     ],
     deepLink: { label: 'Agent Quorum', href: '/agents' },
     gffCriteria: 'Innovation & Technology',
@@ -185,22 +163,21 @@ const STEPS: DemoStep[] = [
     id: 4,
     icon: '⛓️',
     label: 'Smart Contract',
-    title: 'Smart contract executes on Hyperledger Fabric',
-    subtitle: 'IIEPolicy.sol state: TRIGGERED to EXECUTED',
+    title: 'Smart contract executes',
+    subtitle: 'IIEPolicy state: TRIGGERED → EXECUTED · SHA-256 audit chain',
     color: C.amber,
     duration: 28000,
     actor: 'IIEPolicy Smart Contract',
-    actorSub: 'Hyperledger Fabric + Polygon Mumbai · SHA-256 audit chain',
+    actorSub: 'TypeScript FSM · Fabric-ready design · SHA-256 audit chain',
     narrative:
-      'The oracle quorum result is written to Hyperledger Fabric. The smart contract reads the quorum vote, confirms the trigger condition, and transitions state from TRIGGERED to EXECUTED. This generates an immutable audit record — IRDAI auditors can query this block with their permissioned key at any time. The contract then calls SBI\'s Payment Gateway API.',
+      'The oracle quorum result is written to an immutable SHA-256 audit chain. The smart contract reads the quorum vote, confirms the trigger condition, and transitions state from TRIGGERED to EXECUTED. This generates an immutable audit record — IRDAI auditors can query this record with their permissioned key at any time.',
     dataPanel: [
-      { key: 'Contract Address',        value: '0x3a9f...c12e  ·  Polygon Mumbai' },
-      { key: 'State Transition',        value: 'ENROLLED to TRIGGERED to EXECUTED', highlight: true },
-      { key: 'Fabric Block',            value: '#4821  ·  Hash: 8f3a...d291' },
-      { key: 'Payout Calculated',       value: 'Rs 48,200  (4.5 acres x Rs 10,711/acre drought rate)' },
-      { key: 'IRDAI Audit Key',         value: 'Permissioned read granted  ·  Regulation 9', highlight: true },
-      { key: 'Execution Time',          value: '890 ms' },
-      { key: 'Gas (Polygon)',           value: '0.0012 MATIC  approx Rs 0.09' },
+      { key: 'State Transition',         value: 'ENROLLED → TRIGGERED → EXECUTED', highlight: true },
+      { key: 'Audit Hash',               value: 'SHA-256: 8f3a...d291 (crypto.subtle)' },
+      { key: 'Payout Calculated',        value: 'Rs 48,200 (4.5 acres × Rs 10,711/acre × loss factor 0.6825)', highlight: true },
+      { key: 'Payout Formula',           value: 'deficit 80.95% → loss_factor (80.95−40)/60 = 0.6825' },
+      { key: 'IRDAI Audit Key',          value: 'Permissioned read granted · Regulation 9' },
+      { key: 'Execution Time',           value: '890 ms' },
     ],
     deepLink: { label: 'Blockchain Audit', href: '/blockchain' },
     gffCriteria: 'Scalability & Sustainability',
@@ -210,21 +187,21 @@ const STEPS: DemoStep[] = [
     icon: '💸',
     label: 'IMPS Payout',
     title: 'Payout hits Ramesh in 2.8 seconds',
-    subtitle: 'SBI Payment Gateway to NPCI CIB to IMPS settlement',
+    subtitle: 'SBI Payment Gateway → NPCI CIB → IMPS settlement (simulated)',
     color: C.green,
     duration: 30000,
     actor: 'SBI Payment Gateway',
-    actorSub: 'api.onlinesbi.sbi/pgw/v2/imps/initiate  ·  NPCI CIB channel',
+    actorSub: 'api.onlinesbi.sbi/pgw/v2/imps/initiate · NPCI CIB channel',
     narrative:
-      'The smart contract calls SBI\'s Payment Gateway API. SBI routes Rs 48,200 via NPCI\'s Corporate Internet Banking IMPS channel to Ramesh\'s UPI VPA. The Reference Remittance Number and UTR are generated, both anchored on Hyperledger Fabric. Total time from oracle trigger to settlement: 2.8 seconds. Compare: PMFBY average payout time is 47 days.',
+      'The smart contract calls SBI\'s Payment Gateway API. SBI routes Rs 48,200 via NPCI\'s Corporate Internet Banking IMPS channel to Ramesh\'s UPI VPA. The Reference Remittance Number and UTR are generated, both anchored on the audit chain. Total time from oracle trigger to settlement: 2.8 seconds (simulated — live IMPS requires SBI sandbox). Compare: PMFBY average is 47 days.',
     dataPanel: [
-      { key: 'SBI Payment API',         value: 'POST api.onlinesbi.sbi/pgw/v2/imps/initiate', highlight: true },
-      { key: 'Amount',                  value: 'Rs 48,200  ·  Drought payout  ·  Policy SBI-IIE-00341' },
-      { key: 'Beneficiary VPA',         value: 'rameshkumar@sbi' },
-      { key: 'RRN',                     value: '924819023741  SETTLED', highlight: true },
-      { key: 'UTR',                     value: 'SBI2607011823924819' },
-      { key: 'Channel',                 value: 'NPCI CIB · IMPS' },
-      { key: 'Settlement Time',         value: '2.8 seconds  (PMFBY avg: 47 days)', highlight: true },
+      { key: 'SBI Payment API',          value: 'POST api.onlinesbi.sbi/pgw/v2/imps/initiate', highlight: true },
+      { key: 'Amount',                   value: 'Rs 48,200 · Drought payout · Policy SBI-IIE-00341' },
+      { key: 'Beneficiary VPA',          value: 'rameshkumar@sbi' },
+      { key: 'RRN',                      value: '924819023741 SETTLED', highlight: true },
+      { key: 'UTR',                      value: 'SBI2607011823924819' },
+      { key: 'Settlement Time',          value: '2.8 seconds (PMFBY avg: 47 days)', highlight: true },
+      { key: 'Status',                   value: '🟡 SIMULATED — production: SBI YONO IMPS API' },
     ],
     deepLink: { label: 'Payout Tracker', href: '/payouts' },
     gffCriteria: 'Customer Experience',
@@ -237,18 +214,18 @@ const STEPS: DemoStep[] = [
     subtitle: 'RBI 7-year retention · SBI-exclusive credit upsell',
     color: C.orange,
     duration: 28000,
-    actor: 'Hyperledger Fabric + SBI Credit Assessment API',
-    actorSub: 'RBI IT Framework  ·  IRDAI Regulation 9  ·  DPDP Act 2023',
+    actor: 'SHA-256 Audit Chain + SBI Credit Assessment API',
+    actorSub: 'RBI IT Framework · IRDAI Regulation 9 · DPDP Act 2023',
     narrative:
-      'Every event in the journey — session, quorum, contract, payout — is chained on Hyperledger Fabric and retained for 7 years per RBI mandate. IRDAI and RBI auditors have permissioned read access. Simultaneously, IIE calls SBI\'s Credit Assessment API: the Rs 48,200 payout improves Ramesh\'s creditworthiness signal. IIE offers him a KCC top-up of Rs 40,000 — within the same YONO session. No other insurer can do this.',
+      'Every event in the journey — session, quorum, contract, payout — is chained via SHA-256 and retained for 7 years per RBI mandate. IRDAI and RBI auditors have permissioned read access. Simultaneously, IIE calls SBI\'s Credit Assessment API: the Rs 48,200 payout improves Ramesh\'s creditworthiness signal. IIE offers him a KCC top-up of Rs 40,000 — within the same YONO session. No other insurer can do this.',
     dataPanel: [
-      { key: 'Fabric Events Anchored',  value: '6 events  ·  Block #4821 to #4826' },
-      { key: 'Audit Retention',         value: '7 years  ·  RBI IT Framework mandate', highlight: true },
-      { key: 'IRDAI Access',            value: 'Permissioned key  ·  Regulation 9' },
-      { key: 'DPDP Consent ID',         value: '0x7f2a...91bc  ·  On-chain  ·  Section 6' },
-      { key: 'KCC Top-Up Offer',        value: 'Rs 40,000  ·  SBI Credit Assessment API', highlight: true },
-      { key: 'KCC API',                 value: 'POST api.sbi.co.in/credit/v1/farmer-assess' },
-      { key: 'SBI Moat',                value: 'Only SBI can do this — payout to credit in 1 session', highlight: true },
+      { key: 'Audit Events Chained',     value: '6 events · SHA-256 hash chain' },
+      { key: 'Audit Retention',          value: '7 years · RBI IT Framework mandate', highlight: true },
+      { key: 'IRDAI Access',             value: 'Permissioned key · Regulation 9' },
+      { key: 'DPDP Consent ID',          value: '0x7f2a...91bc · On-chain · Section 6' },
+      { key: 'KCC Top-Up Offer',         value: 'Rs 40,000 · SBI Credit Assessment API', highlight: true },
+      { key: 'KCC API',                  value: 'POST api.sbi.co.in/credit/v1/farmer-assess' },
+      { key: 'SBI Moat',                 value: 'Only SBI can do this — payout to credit in 1 session', highlight: true },
     ],
     deepLink: { label: 'Compliance Center', href: '/india-stack' },
     gffCriteria: 'Compliance & Risk',
@@ -256,24 +233,101 @@ const STEPS: DemoStep[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────
-// GFF SCORECARD
+// EVIDENCE INDEX  (replaces scorecard — no self-scores)
 // ─────────────────────────────────────────────────────────────────
-interface ScorecardRow {
-  criterion:   string;
-  icon:        string;
-  score:       number;
-  color:       string;
-  evidence:    string;
-  deepLink:    { label: string; href: string };
-}
-const SCORECARD: ScorecardRow[] = [
-  { criterion: 'Agentic AI',                icon: '🤖', score: 10, color: C.purple, evidence: '4-agent oracle quorum. AI proactively contacts farmer 18h before drought. Passive vs Agentic 10-row table on /agentic.',                                         deepLink: { label: '/agentic',     href: '/agentic'     } },
-  { criterion: 'Customer Acquisition',      icon: '👤', score: 9,  color: C.blue,   evidence: 'YONO 100M+ install base = zero cold acquisition. SBI KCC holders auto-identified. 45% agri lending market share activated from day 1.',                       deepLink: { label: '/sbi-apis',    href: '/sbi-apis'    } },
-  { criterion: 'Digital Adoption',          icon: '📱', score: 9,  color: C.teal,   evidence: 'Native YONO integration. Aadhaar eKYC, DigiLocker, UPI/IMPS. Zero new app installs. BC-point enrollment via tablet.',                                         deepLink: { label: '/demo',        href: '/demo'        } },
-  { criterion: 'Innovation & Technology',   icon: '⚡', score: 10, color: C.amber,  evidence: '4-oracle sovereign quorum (NASA+IMD+ISRO+ICAR). Hyperledger Fabric + Polygon hybrid. GradientBoosting F1=0.91. < 3s payout.',                                  deepLink: { label: '/agents',      href: '/agents'      } },
-  { criterion: 'Scalability & Sustainability', icon: '🌱', score: 9, color: C.green,'evidence': 'Vercel Edge 100+ PoPs, < 50ms. MIT open-source. 500K farmer TAM. Polygon gas approx Rs 0.09/contract. Zero new branch infrastructure.',                deepLink: { label: '/architecture',href: '/architecture' } },
-  { criterion: 'Compliance & Risk',         icon: '🛡️', score: 10, color: C.orange, evidence: '96% compliance (27/28 checks). DPDP Act 2023 + RBI IT Framework + IRDAI Guidelines. SHA-256 audit chain. 7-year retention.',                               deepLink: { label: '/india-stack', href: '/india-stack'  } },
+const EVIDENCE_INDEX = [
+  {
+    criterion: 'Agentic AI',
+    icon: '🤖',
+    color: C.purple,
+    evidence: '4-oracle quorum monitors NDVI / Rain / LST / Soil every 24 h. Proactively contacts farmer 18 h before drought window — not reactive.',
+    link: { label: '/agentic', href: '/agentic' },
+  },
+  {
+    criterion: 'Customer Acquisition',
+    icon: '👤',
+    color: C.blue,
+    evidence: 'YONO 100 M+ install base — zero cold acquisition cost. SBI KCC holders auto-identified via AA consent. 45% agri lending market share activated from day 1.',
+    link: { label: '/sbi-apis', href: '/sbi-apis' },
+  },
+  {
+    criterion: 'Digital Adoption',
+    icon: '📱',
+    color: C.teal,
+    evidence: 'Native YONO integration. Aadhaar eKYC, DigiLocker, UPI/IMPS. Zero new app installs. BC-point enrollment via existing SBI tablets.',
+    link: { label: '/demo', href: '/demo' },
+  },
+  {
+    criterion: 'Innovation & Technology',
+    icon: '⚡',
+    color: C.amber,
+    evidence: 'Real Logistic Regression model (AUC 0.83, F1 0.85, 423 training rows). Exact SHAP via LinearExplainer. 4-oracle quorum. Oracle-1 (NASA POWER) is live. < 3 s payout flow.',
+    link: { label: '/ml', href: '/ml' },
+  },
+  {
+    criterion: 'Scalability & Sustainability',
+    icon: '🌱',
+    color: C.green,
+    evidence: 'Vercel Edge — 100+ PoPs, < 50 ms p95. MIT open-source. 500 K farmer Year-1 TAM. Zero new branch infrastructure required.',
+    link: { label: '/architecture', href: '/architecture' },
+  },
+  {
+    criterion: 'Compliance & Risk',
+    icon: '🛡️',
+    color: C.orange,
+    evidence: '27/28 India Stack checks. DPDP Act 2023 + RBI IT Framework + IRDAI Digital Regulation. Basis risk disclosed and mitigated on /risk. IRDAI 2023 parametric guidelines referenced.',
+    link: { label: '/india-stack', href: '/india-stack' },
+  },
 ];
+
+function EvidenceIndex() {
+  return (
+    <div>
+      <div style={{ borderRadius: 24, padding: '32px 36px', marginBottom: 20, background: 'linear-gradient(135deg,#060D1A,#0d1b4b,#0f2a1a)', border: `1px solid ${C.teal}44`, textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 8 }}>✅</div>
+        <h1 style={{ margin: '0 0 8px', fontSize: 28, fontWeight: 900, color: C.teal }}>Demo Complete</h1>
+        <p style={{ margin: 0, color: C.sub, fontSize: 14 }}>
+          IIE end-to-end · Farmer enrolled → oracle quorum → smart contract → payout in 2.8 s → audit trail + KCC upsell
+        </p>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: C.sub, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 14 }}>
+          GFF 2026 Evidence Index — criterion → artifact
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {EVIDENCE_INDEX.map((row) => (
+            <div key={row.criterion} style={{ borderRadius: 18, border: `1px solid ${row.color}33`, background: `${row.color}06`, padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 24, marginTop: 2 }}>{row.icon}</span>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontWeight: 900, fontSize: 14, color: row.color, marginBottom: 4 }}>{row.criterion}</div>
+                <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.6 }}>{row.evidence}</div>
+              </div>
+              <Link href={row.link.href} style={{ padding: '7px 14px', borderRadius: 10, background: `${row.color}14`, border: `1px solid ${row.color}44`, color: row.color, fontSize: 10, fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap', alignSelf: 'center' }}>
+                {row.link.label} →
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20 }}>
+        {[
+          { label: '🟢 Live Oracle',      href: '/api/oracle/weather?district=Barmer', color: C.teal   },
+          { label: 'ML + SHAP',           href: '/ml',           color: C.purple },
+          { label: 'Risk + Basis Risk',   href: '/risk',         color: C.amber  },
+          { label: 'Blockchain Audit',    href: '/blockchain',   color: C.orange },
+          { label: 'Payout Tracker',      href: '/payouts',      color: C.green  },
+          { label: 'Impact vs PMFBY',     href: '/impact',       color: C.blue   },
+        ].map(b => (
+          <Link key={b.href} href={b.href} style={{ padding: '10px 20px', borderRadius: 12, background: `${b.color}12`, border: `1px solid ${b.color}44`, color: b.color, fontSize: 11, fontWeight: 800, textDecoration: 'none' }}>
+            {b.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────
 // VOICEOVER HOOK
@@ -293,14 +347,14 @@ function useSpeech() {
     if (mutedRef.current) return;
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
-    utter.rate  = 0.92;
-    utter.pitch = 1.0;
+    utter.rate   = 0.92;
+    utter.pitch  = 1.0;
     utter.volume = 1.0;
-    // Prefer Indian English, fall back gracefully
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.lang === 'en-IN')
-      || voices.find(v => v.lang === 'en-GB')
-      || voices.find(v => v.lang.startsWith('en'));
+    const preferred =
+      voices.find(v => v.lang === 'en-IN') ||
+      voices.find(v => v.lang === 'en-GB') ||
+      voices.find(v => v.lang.startsWith('en'));
     if (preferred) utter.voice = preferred;
     utterRef.current = utter;
     window.speechSynthesis.speak(utter);
@@ -312,6 +366,9 @@ function useSpeech() {
     if (mutedRef.current) window.speechSynthesis?.cancel();
   }, []);
 
+  // suppress unused warning
+  void utterRef;
+
   return { speak, cancel, toggleMute, muted };
 }
 
@@ -319,49 +376,50 @@ function useSpeech() {
 // PROGRESS BAR
 // ─────────────────────────────────────────────────────────────────
 function ProgressBar({ step, progress, total }: { step: number; progress: number; total: number }) {
+  const done = step > total;
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
         {STEPS.map((s, i) => {
-          const done    = i + 1 < step;
-          const active  = i + 1 === step;
-          const pending = i + 1 > step;
+          const isDone    = i + 1 < step;
+          const isActive  = i + 1 === step;
+          const isPending = i + 1 > step;
           return (
             <div key={s.id} style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '5px 12px', borderRadius: 999,
-              background: done ? `${C.green}18` : active ? `${s.color}18` : '#0a1120',
-              border: `1px solid ${done ? C.green : active ? s.color : C.border}`,
+              background: isDone ? `${C.green}18` : isActive ? `${s.color}18` : '#0a1120',
+              border: `1px solid ${isDone ? C.green : isActive ? s.color : C.border}`,
               transition: 'all 0.3s',
-              opacity: pending ? 0.45 : 1,
+              opacity: isPending ? 0.45 : 1,
             }}>
-              <span style={{ fontSize: 13 }}>{done ? '✅' : s.icon}</span>
-              <span style={{ fontSize: 10, fontWeight: 800, color: done ? C.green : active ? s.color : C.sub }}>
+              <span style={{ fontSize: 13 }}>{isDone ? '✅' : s.icon}</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: isDone ? C.green : isActive ? s.color : C.sub }}>
                 {s.label}
               </span>
             </div>
           );
         })}
-        {step > total && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, background: `${C.orange}18`, border: `1px solid ${C.orange}` }}>
-            <span style={{ fontSize: 13 }}>🏆</span>
-            <span style={{ fontSize: 10, fontWeight: 800, color: C.orange }}>Scorecard</span>
+        {done && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, background: `${C.teal}18`, border: `1px solid ${C.teal}` }}>
+            <span style={{ fontSize: 13 }}>✅</span>
+            <span style={{ fontSize: 10, fontWeight: 800, color: C.teal }}>Complete</span>
           </div>
         )}
       </div>
       <div style={{ height: 6, borderRadius: 3, background: '#1e293b', overflow: 'hidden' }}>
         <div style={{
           height: '100%', borderRadius: 3,
-          background: step > total
-            ? `linear-gradient(90deg,${C.orange},${C.amber})`
+          background: done
+            ? `linear-gradient(90deg,${C.teal},${C.green})`
             : `linear-gradient(90deg,${STEPS[Math.min(step - 1, STEPS.length - 1)].color},${C.green})`,
-          width: step > total ? '100%' : `${((step - 1) / total + progress / total) * 100}%`,
+          width: done ? '100%' : `${((step - 1) / total + progress / total) * 100}%`,
           transition: 'width 0.4s linear',
         }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-        <span style={{ fontSize: 10, color: C.sub }}>{step > total ? 'Complete' : `Step ${step} of ${total}`}</span>
-        <span style={{ fontSize: 10, color: C.sub }}>{step > total ? '100%' : `${Math.round(((step - 1) / total + progress / total) * 100)}%`}</span>
+        <span style={{ fontSize: 10, color: C.sub }}>{done ? 'Complete' : `Step ${step} of ${total}`}</span>
+        <span style={{ fontSize: 10, color: C.sub }}>{done ? '100%' : `${Math.round(((step - 1) / total + progress / total) * 100)}%`}</span>
       </div>
     </div>
   );
@@ -379,7 +437,7 @@ function StepPanel({ step, progress }: { step: DemoStep; progress: number }) {
           <span style={{ fontSize: 36 }}>{step.icon}</span>
           <div>
             <div style={{ fontSize: 11, fontWeight: 800, color: step.color, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 3 }}>
-              Step {step.id} of {STEPS.length} &middot; {step.gffCriteria}
+              Step {step.id} of {STEPS.length} · {step.gffCriteria}
             </div>
             <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: C.text }}>{step.title}</h2>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 3 }}>{step.subtitle}</div>
@@ -389,7 +447,7 @@ function StepPanel({ step, progress }: { step: DemoStep; progress: number }) {
           <div style={{ height: '100%', borderRadius: 2, background: step.color, width: `${pct}%`, transition: 'width 0.4s linear' }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-          <span style={{ fontSize: 9, color: C.sub }}>{step.actor} &middot; {step.actorSub}</span>
+          <span style={{ fontSize: 9, color: C.sub }}>{step.actor} · {step.actorSub}</span>
           <span style={{ fontSize: 9, color: step.color }}>{pct}%</span>
         </div>
       </div>
@@ -400,7 +458,7 @@ function StepPanel({ step, progress }: { step: DemoStep; progress: number }) {
           <p style={{ margin: 0, fontSize: 13, color: C.text, lineHeight: 1.75 }}>{step.narrative}</p>
           {step.deepLink && (
             <Link href={step.deepLink.href} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 16, padding: '8px 16px', borderRadius: 10, background: `${step.color}14`, border: `1px solid ${step.color}44`, color: step.color, fontSize: 11, fontWeight: 800, textDecoration: 'none' }}>
-              {step.deepLink.label} &rarr;
+              {step.deepLink.label} →
             </Link>
           )}
         </div>
@@ -421,72 +479,6 @@ function StepPanel({ step, progress }: { step: DemoStep; progress: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// SCORECARD
-// ─────────────────────────────────────────────────────────────────
-function JudgeScorecard() {
-  const total = SCORECARD.reduce((s, r) => s + r.score, 0);
-  const max   = SCORECARD.length * 10;
-  return (
-    <div>
-      <div style={{ borderRadius: 24, padding: '32px 36px', marginBottom: 20, background: 'linear-gradient(135deg,#060D1A,#1a0f2e,#0f2a1a)', border: `1px solid ${C.orange}44`, textAlign: 'center' }}>
-        <div style={{ fontSize: 56, marginBottom: 8 }}>🏆</div>
-        <h1 style={{ margin: '0 0 8px', fontSize: 32, fontWeight: 900, color: C.orange }}>Judge Scorecard</h1>
-        <p style={{ margin: '0 0 16px', color: C.sub, fontSize: 14 }}>Self-assessed against SBI GFF 2026 evaluation criteria &middot; IIE end-to-end demo complete</p>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16, padding: '16px 32px', borderRadius: 20, background: `${C.green}10`, border: `1px solid ${C.green}44` }}>
-          <div>
-            <div style={{ fontSize: 44, fontWeight: 900, color: C.green, lineHeight: 1 }}>{total}</div>
-            <div style={{ fontSize: 11, color: C.sub }}>out of {max}</div>
-          </div>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontWeight: 800, fontSize: 16, color: C.green }}>Overall: {Math.round((total / max) * 100)}%</div>
-            <div style={{ fontSize: 11, color: C.sub }}>Across {SCORECARD.length} GFF criteria</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-        {SCORECARD.map((row) => (
-          <div key={row.criterion} style={{ borderRadius: 18, border: `1px solid ${row.color}33`, background: `${row.color}06`, padding: '18px 22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 26 }}>{row.icon}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 900, fontSize: 15, color: row.color }}>{row.criterion}</div>
-                <div style={{ fontSize: 11, color: C.sub, marginTop: 2, lineHeight: 1.55 }}>{row.evidence}</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: row.color, lineHeight: 1 }}>{row.score}</div>
-                <div style={{ fontSize: 9, color: C.sub }}>/ 10</div>
-                <div style={{ width: 60, height: 5, borderRadius: 2, background: '#1e293b', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: 2, background: row.color, width: `${row.score * 10}%` }} />
-                </div>
-              </div>
-              <Link href={row.deepLink.href} style={{ padding: '7px 14px', borderRadius: 10, background: `${row.color}14`, border: `1px solid ${row.color}44`, color: row.color, fontSize: 10, fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                {row.deepLink.label} &rarr;
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-        {[
-          { label: 'Agentic AI',        href: '/agentic',     color: C.purple },
-          { label: 'SBI API Center',    href: '/sbi-apis',    color: C.orange },
-          { label: 'Compliance Center', href: '/india-stack', color: C.teal   },
-          { label: 'Blockchain Audit',  href: '/blockchain',  color: C.amber  },
-          { label: 'Payout Tracker',    href: '/payouts',     color: C.green  },
-          { label: 'Impact Metrics',    href: '/impact',      color: C.blue   },
-        ].map(b => (
-          <Link key={b.href} href={b.href} style={{ padding: '10px 20px', borderRadius: 12, background: `${b.color}12`, border: `1px solid ${b.color}44`, color: b.color, fontSize: 11, fontWeight: 800, textDecoration: 'none' }}>
-            {b.label}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────────
 const SPEEDS = [0.5, 1, 2] as const;
@@ -500,8 +492,7 @@ export default function JudgePage() {
   const [started,  setStarted]  = useState(false);
 
   const { speak, cancel, toggleMute, muted } = useSpeech();
-
-  const TICK_MS  = 200;
+  const TICK_MS = 200;
 
   const advance = useCallback(() => {
     setStepIdx(prev => {
@@ -512,7 +503,6 @@ export default function JudgePage() {
     });
   }, []);
 
-  // ── Autoplay tick ──
   useEffect(() => {
     if (!playing) return;
     if (stepIdx >= STEPS.length) { setPlaying(false); return; }
@@ -528,40 +518,23 @@ export default function JudgePage() {
     return () => clearInterval(t);
   }, [playing, stepIdx, speed, advance]);
 
-  // ── Fire voiceover when step changes (playing OR manual nav) ──
-  // Only fire on stepIdx change so it doesn't re-trigger on every progress tick
   const prevStepRef = useRef(-1);
   useEffect(() => {
     if (!started) return;
     if (stepIdx >= STEPS.length) { cancel(); return; }
     if (stepIdx === prevStepRef.current) return;
     prevStepRef.current = stepIdx;
-    // Small delay so the browser registers the user gesture
     const t = setTimeout(() => speak(VOICEOVER[stepIdx]), 300);
     return () => clearTimeout(t);
   }, [stepIdx, started, speak, cancel]);
 
-  // ── Cancel speech when paused ──
   useEffect(() => {
     if (!playing) cancel();
   }, [playing, cancel]);
 
-  const handleStart = () => {
-    setStarted(true);
-    setPlaying(true);
-  };
-  const handleBack = () => {
-    cancel();
-    setPlaying(false);
-    setProgress(0);
-    setStepIdx(prev => Math.max(0, prev - 1));
-  };
-  const handleNext = () => {
-    cancel();
-    setPlaying(false);
-    setProgress(0);
-    setStepIdx(prev => Math.min(STEPS.length, prev + 1));
-  };
+  const handleStart = () => { setStarted(true); setPlaying(true); };
+  const handleBack  = () => { cancel(); setPlaying(false); setProgress(0); setStepIdx(prev => Math.max(0, prev - 1)); };
+  const handleNext  = () => { cancel(); setPlaying(false); setProgress(0); setStepIdx(prev => Math.min(STEPS.length, prev + 1)); };
 
   // ── Pre-start splash ──
   if (!started) {
@@ -569,16 +542,14 @@ export default function JudgePage() {
       <div style={{ background: C.bg, color: C.text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 680, width: '100%', textAlign: 'center' }}>
           <div style={{ fontSize: 56, marginBottom: 12 }}>⚡</div>
-          <div style={{ fontSize: 11, fontWeight: 800, color: C.orange, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>SBI GFF 2026 &middot; Judge Mode</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: C.orange, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>SBI GFF 2026 · Judge Mode</div>
           <h1 style={{ margin: '0 0 12px', fontSize: 36, fontWeight: 900, lineHeight: 1.2 }}>IIE End-to-End Demo</h1>
           <p style={{ margin: '0 0 16px', color: C.sub, fontSize: 14, lineHeight: 1.75 }}>
-            6 steps &middot; ~3 minutes at 1&times; speed &middot; Farmer opens YONO &rarr; AI offers insurance &rarr;
-            Oracle quorum &rarr; Smart contract &rarr; IMPS payout in 2.8s &rarr; Audit trail + KCC top-up.
-            Ends with a GFF Judge Scorecard.
+            6 steps · ~3 minutes at 1× speed · Farmer opens YONO → AI offers insurance →
+            Oracle quorum → Smart contract → IMPS payout in 2.8 s → Audit trail + KCC top-up.
           </p>
-          {/* Narration notice */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20, padding: '10px 18px', borderRadius: 12, background: 'rgba(100,255,218,0.06)', border: '1px solid rgba(100,255,218,0.25)', fontSize: 12, color: '#64ffda' }}>
-            🔊 Audio narration included &mdash; turn up your volume for the full experience
+            🔊 Audio narration included — turn up your volume for the full experience
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
             {STEPS.map(s => (
@@ -608,64 +579,40 @@ export default function JudgePage() {
         {/* ── Top bar ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: C.orange, letterSpacing: '0.12em', textTransform: 'uppercase' }}>SBI GFF 2026 &middot; Judge Mode</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: C.orange, letterSpacing: '0.12em', textTransform: 'uppercase' }}>SBI GFF 2026 · Judge Mode</div>
             <h1 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 900 }}>IIE End-to-End Demo</h1>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-
-            {/* Mute / Unmute toggle */}
-            <button
-              onClick={toggleMute}
-              title={muted ? 'Unmute narrator' : 'Mute narrator'}
-              style={{
-                padding: '5px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 800,
-                border: `1px solid ${muted ? C.red : C.teal}`,
-                background: muted ? `${C.red}14` : `${C.teal}14`,
-                color: muted ? C.red : C.teal,
-              }}
-            >
+            <button onClick={toggleMute} title={muted ? 'Unmute narrator' : 'Mute narrator'} style={{ padding: '5px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 800, border: `1px solid ${muted ? C.red : C.teal}`, background: muted ? `${C.red}14` : `${C.teal}14`, color: muted ? C.red : C.teal }}>
               {muted ? '🔇 Muted' : '🔊 Narrator'}
             </button>
-
-            {/* Speed */}
             <div style={{ display: 'flex', gap: 4 }}>
               {SPEEDS.map(s => (
                 <button key={s} onClick={() => setSpeed(s)} style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${speed === s ? C.orange : C.border}`, background: speed === s ? `${C.orange}14` : 'transparent', color: speed === s ? C.orange : C.sub, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
-                  {s}&times;
+                  {s}×
                 </button>
               ))}
             </div>
-
-            {/* Play controls */}
             {stepIdx < STEPS.length && (
               <>
-                <button onClick={handleBack} disabled={stepIdx === 0} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, fontSize: 12, fontWeight: 800, cursor: stepIdx === 0 ? 'not-allowed' : 'pointer', opacity: stepIdx === 0 ? 0.4 : 1 }}>&#9664; Back</button>
-                <button
-                  onClick={() => setPlaying(p => !p)}
-                  style={{
-                    padding: '7px 18px', borderRadius: 10,
-                    background: playing ? `${C.amber}20` : `linear-gradient(135deg,${C.orange},${C.amber})`,
-                    color: playing ? C.amber : '#030712',
-                    fontSize: 12, fontWeight: 900, cursor: 'pointer',
-                    border: playing ? `1px solid ${C.amber}` : 'none',
-                  } as React.CSSProperties}
-                >
+                <button onClick={handleBack} disabled={stepIdx === 0} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, fontSize: 12, fontWeight: 800, cursor: stepIdx === 0 ? 'not-allowed' : 'pointer', opacity: stepIdx === 0 ? 0.4 : 1 }}>◀ Back</button>
+                <button onClick={() => setPlaying(p => !p)} style={{ padding: '7px 18px', borderRadius: 10, background: playing ? `${C.amber}20` : `linear-gradient(135deg,${C.orange},${C.amber})`, color: playing ? C.amber : '#030712', fontSize: 12, fontWeight: 900, cursor: 'pointer', border: playing ? `1px solid ${C.amber}` : 'none' } as React.CSSProperties}>
                   {playing ? '⏸ Pause' : '▶ Play'}
                 </button>
-                <button onClick={handleNext} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>Next &#9654;</button>
+                <button onClick={handleNext} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>Next ▶</button>
               </>
             )}
-            <Link href="/" style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>&larr; Home</Link>
+            <Link href="/" style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${C.border}`, background: 'transparent', color: C.sub, fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>← Home</Link>
           </div>
         </div>
 
         {/* ── Progress bar ── */}
         <ProgressBar step={stepIdx + 1} progress={progress} total={STEPS.length} />
 
-        {/* ── Step or scorecard ── */}
+        {/* ── Step or evidence index ── */}
         {stepIdx < STEPS.length
           ? <StepPanel step={STEPS[stepIdx]} progress={progress} />
-          : <JudgeScorecard />
+          : <EvidenceIndex />
         }
 
         {/* ── Step jump strip ── */}
@@ -676,8 +623,8 @@ export default function JudgePage() {
                 {s.icon} {s.id}
               </button>
             ))}
-            <button onClick={() => { cancel(); setPlaying(false); setStepIdx(STEPS.length); setProgress(0); }} style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${C.orange}`, background: `${C.orange}14`, color: C.orange, fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
-              🏆 Scorecard
+            <button onClick={() => { cancel(); setPlaying(false); setStepIdx(STEPS.length); setProgress(0); }} style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${C.teal}`, background: `${C.teal}14`, color: C.teal, fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+              ✅ Finish
             </button>
           </div>
         )}
