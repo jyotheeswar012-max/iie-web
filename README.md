@@ -48,17 +48,19 @@ Every row below is the same answer you will find in JUDGES.md and in the live UI
 rainfall_deficit_pct = (normal_mm − actual_mm) / normal_mm × 100
 loss_factor          = max(0, min(1.0, (deficit_pct − 40) / 60))
                                           ↑ IRDAI drought trigger at 40%
-payout_inr           = acreage × sum_insured_per_acre × loss_factor
+payout_inr           = Math.round(acreage × sum_insured_per_acre × loss_factor)
 ```
 
 **Example — Barmer drought, Ramesh Kumar (4.5 acres, ₹15,700/acre SI — SBI KCC holder rate, PMFBY 2024-25):**
 ```
-deficit_pct = (42 − 1) / 42 × 100 = 97.60%
-loss_factor = (97.60 − 40) / 60   = 0.9600
-payout      = 4.5 × ₹15,700 × 0.9600 = ₹67,821
+deficit_pct = (42 − 1) / 42 × 100 = 97.62%
+loss_factor = (97.62 − 40) / 60   = 0.9603
+payout      = Math.round(4.5 × 15,700 × 0.9603)
+            = Math.round(67,845.2)
+            = ₹67,846
 ```
 
-> Live figure — NASA POWER MERRA-2 Barmer rainfall as of today. Payout updates automatically as real data changes.
+> The live API uses NASA POWER MERRA-2 float rainfall (e.g. 1.28 mm), so the returned figure will differ slightly from this integer-input example. The formula and rounding are identical.
 
 The displayed payout is always `Math.round(formula)`. No separate bonus, no hardcoded override.
 Full step-by-step breakdown in every `/api/oracle/verify` response (`payout_math.explanation`).
