@@ -301,7 +301,7 @@ export default function DeckPage() {
         <div style={{ textAlign: 'center', marginTop: 8 }}>
           <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>Live demo · Full codebase · Working prototype</div>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <span style={{ padding: '10px 22px', borderRadius: 10, background: '#f68b1f', color: '#030712', fontWeight: 900, fontSize: 13 }}>🚀 [YOUR VERCEL URL]/judge</span>
+            <span style={{ padding: '10px 22px', borderRadius: 10, background: '#f68b1f', color: '#030712', fontWeight: 900, fontSize: 13 }}>🚀 iie-web-yono.vercel.app/judge</span>
             <span style={{ padding: '10px 22px', borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: '#e2e8f0', fontWeight: 700, fontSize: 13 }}>github.com/jyotheeswar012-max/iie-web</span>
           </div>
         </div>
