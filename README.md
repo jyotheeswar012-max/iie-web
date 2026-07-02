@@ -19,7 +19,7 @@
 
 ---
 
-## 🔍 What's Real vs Simulated — Single Source of Truth
+## 🔍 What’s Real vs Simulated — Single Source of Truth
 
 Every row below is the same answer you will find in JUDGES.md and in the live UI.
 
@@ -53,14 +53,14 @@ payout_inr           = Math.round(acreage × sum_insured_per_acre × loss_factor
 
 **Example — Barmer drought, Ramesh Kumar (4.5 acres, ₹15,700/acre SI — SBI KCC holder rate, PMFBY 2024-25):**
 ```
-deficit_pct = (42 − 1) / 42 × 100 = 97.62%
-loss_factor = (97.62 − 40) / 60   = 0.9603
-payout      = Math.round(4.5 × 15,700 × 0.9603)
-            = Math.round(67,845.2)
-            = ₹67,846
+deficit_pct = (42 − 8) / 42 × 100 = 80.95%
+loss_factor = (80.95 − 40) / 60   = 0.6825
+payout      = Math.round(4.5 × 15,700 × 0.6825)
+            = Math.round(48,221.6)
+            = ₹48,221
 ```
 
-> The live API uses NASA POWER MERRA-2 float rainfall (e.g. 1.28 mm), so the returned figure will differ slightly from this integer-input example. The formula and rounding are identical.
+> The live `/api/oracle/verify` uses NASA POWER MERRA-2 float rainfall, so the returned `payout_amount` will vary day-to-day. The formula and rounding are identical to the above.
 
 The displayed payout is always `Math.round(formula)`. No separate bonus, no hardcoded override.
 Full step-by-step breakdown in every `/api/oracle/verify` response (`payout_math.explanation`).

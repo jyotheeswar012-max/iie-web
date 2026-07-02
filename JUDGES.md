@@ -15,7 +15,7 @@ nothing due to **23% fraud rate** in claims (CAG Report 2022–23).
 
 IIE is a **parametric insurance engine** designed for SBI YONO. It monitors 4 sovereign
 data sources (NASA MODIS, IMD, Sentinel-2, ICAR), runs an oracle quorum, executes a
-smart contract, and settles **₹48,238 via IMPS in 2.8 seconds** —
+smart contract, and settles **₹48,221 via IMPS in 2.8 seconds** —
 with zero forms, zero branch visit, zero farmer action.
 
 > **Prototype scope:** The blockchain layer is a TypeScript state machine
@@ -39,7 +39,7 @@ Step 1 📱  YONO Open          →  SBI YONO session screen (simulated)
 Step 2 🤖  Agentic AI Offer   →  AI pushes insurance 18h before drought window
 Step 3 🛰️  Oracle Quorum      →  4 data sources · 94% consensus (TypeScript logic)
 Step 4 ⛓️  Smart Contract     →  State machine: TRIGGERED → EXECUTED (simulated)
-Step 5 💸  IMPS Payout        →  ₹48,238 settlement receipt in 2.8s (simulated)
+Step 5 💸  IMPS Payout        →  ₹48,221 settlement receipt in 2.8s (simulated)
 Step 6 📝  Audit + KCC        →  SHA-256 audit log + KCC top-up offer
 ```
 
