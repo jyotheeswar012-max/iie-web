@@ -53,10 +53,12 @@ payout_inr           = acreage × sum_insured_per_acre × loss_factor
 
 **Example — Barmer drought, Ramesh Kumar (4.5 acres, ₹15,700/acre SI — SBI KCC holder rate, PMFBY 2024-25):**
 ```
-deficit_pct = (42 − 8) / 42 × 100 = 80.95%
-loss_factor = (80.95 − 40) / 60   = 0.6825
-payout      = 4.5 × ₹15,700 × 0.6825 = ₹48,238
+deficit_pct = (42 − 1) / 42 × 100 = 97.60%
+loss_factor = (97.60 − 40) / 60   = 0.9600
+payout      = 4.5 × ₹15,700 × 0.9600 = ₹67,821
 ```
+
+> Live figure — NASA POWER MERRA-2 Barmer rainfall as of today. Payout updates automatically as real data changes.
 
 The displayed payout is always `Math.round(formula)`. No separate bonus, no hardcoded override.
 Full step-by-step breakdown in every `/api/oracle/verify` response (`payout_math.explanation`).
