@@ -1,4 +1,16 @@
-# Root-level requirements.txt — Vercel picks this up automatically for Python functions
-# Heavy ML packages (scikit-learn, numpy) are optional — app falls back gracefully if missing
-httpx==0.27.0
-python-multipart==0.0.9
+# requirements.txt
+#
+# PURPOSE: ML model training only (scripts/train_model.py).
+# This file is NOT used by the Vercel deployment.
+#
+# The live judge deploy (iie-web-yono.vercel.app) is a pure Next.js app.
+# ML inference runs in TypeScript edge routes using exported weights from
+# src/data/model_weights.json — no Python runtime required at inference time.
+#
+# To retrain the model locally:
+#   pip install -r requirements.txt
+#   python scripts/train_model.py
+#
+scikit-learn==1.5.0
+numpy==1.26.4
+pandas==2.2.2
