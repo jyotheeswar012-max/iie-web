@@ -19,7 +19,7 @@
 
 ---
 
-## 🔍 What’s Real vs Simulated — Single Source of Truth
+## 🔍 What's Real vs Simulated — Single Source of Truth
 
 Every row below is the same answer you will find in JUDGES.md and in the live UI.
 
@@ -96,9 +96,6 @@ curl -X POST https://iie-web-yono.vercel.app/api/oracle/verify \
 curl -X POST https://iie-web-yono.vercel.app/api/ml/predict \
   -H 'Content-Type: application/json' \
   -d '{"district":"Barmer","ndvi":0.21,"temp_c":47.2,"rainfall_mm":8,"soil_moisture_pct":12,"event_type":"drought"}'
-
-# 4. Health
-curl https://iie-web-yono.vercel.app/api/health
 ```
 
 ---
