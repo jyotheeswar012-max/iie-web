@@ -5,6 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4.5-3178c6?logo=typescript)](https://www.typescriptlang.org)
 [![Tailwind](https://img.shields.io/badge/Tailwind-3.4.4-06b6d4?logo=tailwindcss)](https://tailwindcss.com)
 [![Pitch Deck](https://img.shields.io/badge/Pitch%20Deck-PDF-F68B1F?logo=adobeacrobatreader)](https://github.com/jyotheeswar012-max/iie-web/blob/main/pitch-deck.pdf)
+[![Release](https://img.shields.io/badge/Release-v1.0.0-22c55e?logo=github)](https://github.com/jyotheeswar012-max/iie-web/releases/tag/v1.0.0)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 > **SBI Global Fintech Fest 2026** · A Next.js 14 parametric crop insurance prototype built for SBI's YONO Kisan platform — demonstrating zero-paperwork enrollment, 4-oracle quorum logic, and sub-3-second IMPS payout flows.
@@ -19,7 +20,7 @@
 
 ---
 
-## 🔍 What’s Real vs Simulated — Single Source of Truth
+## 🔍 What's Real vs Simulated — Single Source of Truth
 
 Every row below is the same answer you will find in JUDGES.md and in the live UI.
 
@@ -81,6 +82,10 @@ Full step-by-step breakdown in every `/api/oracle/verify` response (`payout_math
 | `/impact` | IIE vs PMFBY evidence table |
 | `/architecture` | System design + production roadmap |
 | `/pitch` | Pitch toolkit: script, slides, Q&A |
+| `/readiness` | Production readiness matrix · live vs simulated breakdown |
+| `/business` | SBI P&L — premium float, KCC upsell, fraud savings, CAC reduction |
+| `/sbi-pl` | SBI business case deep-dive |
+| `/deck` | Printable 10-slide idea deck for GFF 2026 submission |
 
 ---
 
