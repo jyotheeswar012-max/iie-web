@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-export const runtime = 'edge';
+// NOTE: runtime intentionally NOT set to 'edge' — Math.random() and complex
+// logic are incompatible with the Vercel Edge bundle; Node.js runtime is used.
 
 function cors(res: NextResponse) {
   res.headers.set('Access-Control-Allow-Origin', '*');
@@ -89,10 +90,10 @@ function runClaimsAgent(od: typeof ORACLE[string], event: string, crop: string, 
   reasoning.push(`Acreage: ${acreage}ac — within season window (Kharif Jun–Oct 2026)`);
   reasoning.push(`No prior claim this season — clean slate ✅`);
   let primary = false;
-  if (ev==='drought'&&od.ndvi<ct.drought_ndvi)   { primary=true; score+=40; flags.push(`NDVI ${od.ndvi} < ${ct.drought_ndvi}`); reasoning.push(`✅ Drought threshold MET`); }
-  else if (ev==='flood'&&od.rain_mm>ct.flood_rain){ primary=true; score+=40; flags.push(`Rain ${od.rain_mm}mm > ${ct.flood_rain}mm`); reasoning.push(`✅ Flood threshold MET`); }
+  if (ev==='drought'&&od.ndvi<ct.drought_ndvi)    { primary=true; score+=40; flags.push(`NDVI ${od.ndvi} < ${ct.drought_ndvi}`); reasoning.push(`✅ Drought threshold MET`); }
+  else if (ev==='flood'&&od.rain_mm>ct.flood_rain) { primary=true; score+=40; flags.push(`Rain ${od.rain_mm}mm > ${ct.flood_rain}mm`); reasoning.push(`✅ Flood threshold MET`); }
   else if (ev==='heatwave'&&od.temp_c>ct.heat_temp){ primary=true; score+=40; flags.push(`Temp ${od.temp_c}°C > ${ct.heat_temp}°C`); reasoning.push(`✅ Heat threshold MET`); }
-  else if (ev==='cyclone'&&od.rain_mm>180)         { primary=true; score+=40; reasoning.push(`✅ Cyclone-grade rainfall MET`); }
+  else if (ev==='cyclone'&&od.rain_mm>180)          { primary=true; score+=40; reasoning.push(`✅ Cyclone-grade rainfall MET`); }
   else reasoning.push(`❌ Primary threshold NOT crossed for ${ev}`);
   if (primary) {
     if (od.soil<20)              { score+=20; reasoning.push(`✅ Soil ${od.soil}% confirms crop stress`); }
@@ -139,55 +140,64 @@ function runFraudAgent(od: typeof ORACLE[string], acreage: number, district: str
 
 type ContractState = 'ACTIVE'|'TRIGGERED'|'FRAUD_REVIEW'|'EXECUTED'|'REJECTED';
 
+function buildResponse(policy_id: string, district: string, event_type: string, crop: string, acreage: number, farmer: string) {
+  const od = ORACLE[district] ?? ORACLE['Barmer'];
+  const ev = event_type.toLowerCase();
+  const riskAgent   = runRiskAgent(od, ev, crop);
+  const claimsAgent = runClaimsAgent(od, ev, crop, acreage);
+  const fraudAgent  = runFraudAgent(od, acreage, district, ev);
+  const agents      = [riskAgent, claimsAgent, fraudAgent];
+  const wc = Math.round(riskAgent.confidence*0.35 + claimsAgent.confidence*0.40 + fraudAgent.confidence*0.25);
+  const fraud_score = (fraudAgent.metrics.fraud_score as number) ?? 0;
+  let state: ContractState;
+  let reason: string;
+  if (fraud_score>=40)                                              { state='FRAUD_REVIEW'; reason='High fraud probability'; }
+  else if (agents.filter(a=>a.verdict==='REJECT').length>=2)        { state='REJECTED';     reason='Quorum rejection'; }
+  else if (wc>=75)                                                  { state='TRIGGERED';    reason='Quorum met — payout queued'; }
+  else if (wc>=50)                                                  { state='FRAUD_REVIEW'; reason='Marginal confidence — escalated'; }
+  else                                                              { state='ACTIVE';       reason='Threshold not crossed'; }
+  const PAYOUTS: Record<string,Record<string,number>> = {
+    drought:  {Cotton:48200,Paddy:32800,Wheat:62500,Soybean:28400,Groundnut:38600,Sugarcane:72000,Maize:36000,Chilli:88000,Tomato:68000,Onion:52000,default:42000},
+    flood:    {Paddy:55000,Cotton:41000,Wheat:38000,Soybean:44000,Groundnut:36000,Sugarcane:60000,Maize:42000,Chilli:72000,Tomato:58000,Onion:48000,default:45000},
+    heatwave: {Soybean:28400,Cotton:52000,Wheat:44000,Tomato:68000,Onion:55000,Maize:38000,Chilli:82000,Paddy:35000,Groundnut:44000,default:38000},
+    cyclone:  {Paddy:61000,Cotton:58000,Wheat:52000,Sugarcane:75000,Maize:55000,default:55000},
+  };
+  const cap = crop.charAt(0).toUpperCase()+crop.slice(1).toLowerCase();
+  const base = (PAYOUTS[ev]??PAYOUTS.drought)[cap]??(PAYOUTS[ev]??PAYOUTS.drought)['default'];
+  const payout = state==='TRIGGERED' ? Math.round(base*(acreage/4)) : null;
+  return {
+    success:true, policy_id, district, event_type:ev, crop, acreage, farmer,
+    contract_state:state, payout_amount:payout,
+    quorum:{ weighted_confidence:wc, threshold:75, met:wc>=75,
+      yes:agents.filter(a=>a.verdict==='APPROVE').length,
+      review:agents.filter(a=>a.verdict==='REVIEW').length,
+      reject:agents.filter(a=>a.verdict==='REJECT').length,
+      rule:'Weighted ≥ 75%: RiskAgent(35%) + ClaimsAgent(40%) + FraudAgent(25%)', reason },
+    agents,
+    oracle_snapshot:{ ndvi:od.ndvi, temp_c:od.temp_c, rain_mm:od.rain_mm, soil:od.soil, sources:['NASA MODIS','IMD District','ISRO Bhuvan','ICAR Sensors'] },
+    blockchain:{ previous_state:'ACTIVE', new_state:state, valid:true,
+      states:['ACTIVE','TRIGGERED','FRAUD_REVIEW','EXECUTED','REJECTED'],
+      note:'Production: Polygon Mumbai + Hyperledger Fabric dual ledger' },
+    ts: new Date().toISOString(),
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { policy_id='SBI-IIE-00341', district='Barmer', event_type='drought', crop='wheat', acreage=4.5, farmer='Farmer' } = body;
-    const od = ORACLE[district] ?? ORACLE['Barmer'];
-    const ev = event_type.toLowerCase();
-    const riskAgent   = runRiskAgent(od, ev, crop);
-    const claimsAgent = runClaimsAgent(od, ev, crop, acreage);
-    const fraudAgent  = runFraudAgent(od, acreage, district, ev);
-    const agents      = [riskAgent, claimsAgent, fraudAgent];
-    const wc = Math.round(riskAgent.confidence*0.35 + claimsAgent.confidence*0.40 + fraudAgent.confidence*0.25);
-    const fraud_score = (fraudAgent.metrics.fraud_score as number) ?? 0;
-    let state: ContractState;
-    let reason: string;
-    if (fraud_score>=40)                                             { state='FRAUD_REVIEW'; reason='High fraud probability'; }
-    else if (agents.filter(a=>a.verdict==='REJECT').length>=2)       { state='REJECTED';     reason='Quorum rejection'; }
-    else if (wc>=75)                                                 { state='TRIGGERED';    reason='Quorum met — payout queued'; }
-    else if (wc>=50)                                                 { state='FRAUD_REVIEW'; reason='Marginal confidence — escalated'; }
-    else                                                             { state='ACTIVE';       reason='Threshold not crossed'; }
-    const PAYOUTS: Record<string,Record<string,number>> = {
-      drought:  {Cotton:48200,Paddy:32800,Wheat:62500,Soybean:28400,Groundnut:38600,Sugarcane:72000,Maize:36000,Chilli:88000,Tomato:68000,Onion:52000,default:42000},
-      flood:    {Paddy:55000,Cotton:41000,Wheat:38000,Soybean:44000,Groundnut:36000,Sugarcane:60000,Maize:42000,Chilli:72000,Tomato:58000,Onion:48000,default:45000},
-      heatwave: {Soybean:28400,Cotton:52000,Wheat:44000,Tomato:68000,Onion:55000,Maize:38000,Chilli:82000,Paddy:35000,Groundnut:44000,default:38000},
-      cyclone:  {Paddy:61000,Cotton:58000,Wheat:52000,Sugarcane:75000,Maize:55000,default:55000},
-    };
-    const cap = crop.charAt(0).toUpperCase()+crop.slice(1).toLowerCase();
-    const base = (PAYOUTS[ev]??PAYOUTS.drought)[cap]??(PAYOUTS[ev]??PAYOUTS.drought)['default'];
-    const payout = state==='TRIGGERED' ? Math.round(base*(acreage/4)) : null;
-    return cors(NextResponse.json({
-      success:true, policy_id, district, event_type:ev, crop, acreage, farmer,
-      contract_state:state, payout_amount:payout,
-      quorum:{ weighted_confidence:wc, threshold:75, met:wc>=75,
-        yes:agents.filter(a=>a.verdict==='APPROVE').length,
-        review:agents.filter(a=>a.verdict==='REVIEW').length,
-        reject:agents.filter(a=>a.verdict==='REJECT').length,
-        rule:'Weighted ≥ 75%: RiskAgent(35%) + ClaimsAgent(40%) + FraudAgent(25%)', reason },
-      agents,
-      oracle_snapshot:{ ndvi:od.ndvi, temp_c:od.temp_c, rain_mm:od.rain_mm, soil:od.soil, sources:['NASA MODIS','IMD District','ISRO Bhuvan','ICAR Sensors'] },
-      blockchain:{ previous_state:'ACTIVE', new_state:state, valid:true,
-        states:['ACTIVE','TRIGGERED','FRAUD_REVIEW','EXECUTED','REJECTED'],
-        note:'Production: Polygon Mumbai + Hyperledger Fabric dual ledger' },
-      ts: new Date().toISOString(),
-    }));
-  } catch(e) { return cors(NextResponse.json({ error:String(e) },{ status:500 })); }
+    return cors(NextResponse.json(buildResponse(policy_id, district, event_type, crop, Number(acreage), farmer)));
+  } catch(e) { return cors(NextResponse.json({ error: String(e) }, { status:500 })); }
 }
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const b = { policy_id:url.searchParams.get('policy_id')??'SBI-IIE-DEMO', district:url.searchParams.get('district')??'Barmer', event_type:url.searchParams.get('event')??'drought', crop:url.searchParams.get('crop')??'wheat', acreage:parseFloat(url.searchParams.get('acreage')??'4.5') };
-  const fakeReq = new Request(req.url,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) });
-  return POST(fakeReq as NextRequest);
+  try {
+    const { searchParams } = new URL(req.url);
+    const district   = searchParams.get('district')   ?? 'Barmer';
+    const event_type = searchParams.get('event')      ?? 'drought';
+    const crop       = searchParams.get('crop')       ?? 'wheat';
+    const acreage    = parseFloat(searchParams.get('acreage') ?? '4.5');
+    const policy_id  = searchParams.get('policy_id') ?? 'SBI-IIE-DEMO';
+    return cors(NextResponse.json(buildResponse(policy_id, district, event_type, crop, acreage, 'Demo Farmer')));
+  } catch(e) { return cors(NextResponse.json({ error: String(e) }, { status:500 })); }
 }
