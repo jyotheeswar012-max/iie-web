@@ -55,7 +55,7 @@ const VOICEOVER: string[] = [
    The entire execution takes 890 milliseconds.`,
 
   `Step 5. The smart contract calls SBI's Payment Gateway API.
-   SBI routes 48,200 rupees via NPCI's IMPS channel to the farmer's UPI address.
+   SBI routes 48,238 rupees via NPCI's IMPS channel to the farmer's UPI address.
    The Reference Remittance Number is generated.
    Total time from oracle trigger to money in the farmer's account: 2.8 seconds.
    PMFBY average payout time is 47 days.`,
@@ -174,7 +174,7 @@ const STEPS: DemoStep[] = [
     dataPanel: [
       { key: 'State Transition',         value: 'ENROLLED → TRIGGERED → EXECUTED', highlight: true },
       { key: 'Audit Hash',               value: 'SHA-256: 8f3a...d291 (crypto.subtle)' },
-      { key: 'Payout Calculated',        value: 'Rs 48,200 (4.5 acres × Rs 10,711/acre × loss factor 0.6825)', highlight: true },
+      { key: 'Payout Calculated',        value: 'Rs 48,238 (4.5 acres × Rs 15,700/acre × loss factor 0.6825)', highlight: true },
       { key: 'Payout Formula',           value: 'deficit 80.95% → loss_factor (80.95−40)/60 = 0.6825' },
       { key: 'IRDAI Audit Key',          value: 'Permissioned read granted · Regulation 9' },
       { key: 'Execution Time',           value: '890 ms' },
@@ -193,10 +193,10 @@ const STEPS: DemoStep[] = [
     actor: 'SBI Payment Gateway',
     actorSub: 'api.onlinesbi.sbi/pgw/v2/imps/initiate · NPCI CIB channel',
     narrative:
-      'The smart contract calls SBI\'s Payment Gateway API. SBI routes Rs 48,200 via NPCI\'s Corporate Internet Banking IMPS channel to Ramesh\'s UPI VPA. The Reference Remittance Number and UTR are generated, both anchored on the audit chain. Total time from oracle trigger to settlement: 2.8 seconds (simulated — live IMPS requires SBI sandbox). Compare: PMFBY average is 47 days.',
+      'The smart contract calls SBI\'s Payment Gateway API. SBI routes Rs 48,238 via NPCI\'s Corporate Internet Banking IMPS channel to Ramesh\'s UPI VPA. The Reference Remittance Number and UTR are generated, both anchored on the audit chain. Total time from oracle trigger to settlement: 2.8 seconds (simulated — live IMPS requires SBI sandbox). Compare: PMFBY average is 47 days.',
     dataPanel: [
       { key: 'SBI Payment API',          value: 'POST api.onlinesbi.sbi/pgw/v2/imps/initiate', highlight: true },
-      { key: 'Amount',                   value: 'Rs 48,200 · Drought payout · Policy SBI-IIE-00341' },
+      { key: 'Amount',                   value: 'Rs 48,238 · Drought payout · Policy SBI-IIE-00341' },
       { key: 'Beneficiary VPA',          value: 'rameshkumar@sbi' },
       { key: 'RRN',                      value: '924819023741 SETTLED', highlight: true },
       { key: 'UTR',                      value: 'SBI2607011823924819' },
@@ -217,7 +217,7 @@ const STEPS: DemoStep[] = [
     actor: 'SHA-256 Audit Chain + SBI Credit Assessment API',
     actorSub: 'RBI IT Framework · IRDAI Regulation 9 · DPDP Act 2023',
     narrative:
-      'Every event in the journey — session, quorum, contract, payout — is chained via SHA-256 and retained for 7 years per RBI mandate. IRDAI and RBI auditors have permissioned read access. Simultaneously, IIE calls SBI\'s Credit Assessment API: the Rs 48,200 payout improves Ramesh\'s creditworthiness signal. IIE offers him a KCC top-up of Rs 40,000 — within the same YONO session. No other insurer can do this.',
+      'Every event in the journey — session, quorum, contract, payout — is chained via SHA-256 and retained for 7 years per RBI mandate. IRDAI and RBI auditors have permissioned read access. Simultaneously, IIE calls SBI\'s Credit Assessment API: the Rs 48,238 payout improves Ramesh\'s creditworthiness signal. IIE offers him a KCC top-up of Rs 40,000 — within the same YONO session. No other insurer can do this.',
     dataPanel: [
       { key: 'Audit Events Chained',     value: '6 events · SHA-256 hash chain' },
       { key: 'Audit Retention',          value: '7 years · RBI IT Framework mandate', highlight: true },
@@ -261,7 +261,7 @@ const EVIDENCE_INDEX = [
     criterion: 'Innovation & Technology',
     icon: '⚡',
     color: C.amber,
-    evidence: 'Real Logistic Regression model (AUC 0.83, F1 0.85, 423 training rows). Exact SHAP via LinearExplainer. 4-oracle quorum. Oracle-1 (NASA POWER) is live. < 3 s payout flow.',
+    evidence: 'Real Logistic Regression model (AUC 0.83, F1 0.85) — 500-row dataset, 423 used after cleaning, 338 train / 85 test. Exact SHAP via LinearExplainer. 4-oracle quorum. Oracle-1 (NASA POWER) is live. < 3 s payout flow.',
     link: { label: '/ml', href: '/ml' },
   },
   {
