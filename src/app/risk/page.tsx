@@ -21,6 +21,7 @@ const LEVEL_COLORS: Record<string,string> = {
   Medium:  'text-yellow-400 bg-yellow-950/50 border-yellow-800',
   Low:     'text-green-400 bg-green-950/50 border-green-800',
 }
+
 export default function RiskPage() {
   const [filterState, setFilterState] = useState('All')
   const [filterLevel, setFilterLevel] = useState('All')
@@ -30,19 +31,55 @@ export default function RiskPage() {
     .filter(d => filterState==='All' || d.state===filterState)
     .filter(d => filterLevel==='All' || d.level===filterLevel)
     .sort((a,b) => b.score-a.score)
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+      {/* ── Page header ── */}
       <div className="rounded-2xl p-6 mb-6" style={{ background:'linear-gradient(135deg,#0a0e27,#0d1b4b,#1a237e)' }}>
         <div className="text-xs font-bold tracking-[3px] text-[#64ffda] uppercase mb-2">🛰️ Satellite Risk Intelligence</div>
         <h1 className="text-3xl font-black gradient-text">Live Risk Map — India</h1>
-        <p className="text-white/60 text-sm mt-2">Real-time parametric risk scoring · NASA MODIS, IMD, Sentinel-2 & ICAR</p>
+        <p className="text-white/60 text-sm mt-2">Real-time parametric risk scoring · NASA MODIS, IMD, Sentinel-2 &amp; ICAR</p>
       </div>
+
+      {/* ── Basis Risk & Moral Hazard callout ── */}
+      <div className="rounded-2xl border border-amber-700/40 bg-amber-950/20 p-5 mb-6">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl mt-0.5" aria-hidden>⚠️</span>
+          <div>
+            <h2 className="text-sm font-bold text-amber-300 uppercase tracking-widest mb-2">
+              Known Limitation — Basis Risk &amp; Moral Hazard
+            </h2>
+            <p className="text-sm text-white/70 leading-relaxed mb-2">
+              Parametric insurance carries inherent <span className="text-amber-200 font-semibold">basis risk</span>: a
+              trigger may fire when a specific farmer suffered no loss (false positive), or fail to fire when
+              they did (false negative), because index measurements are district-level proxies rather than
+              plot-level observations.
+            </p>
+            <p className="text-sm text-white/70 leading-relaxed mb-2">
+              AgroShield mitigates this through a <span className="text-[#64ffda] font-semibold">4-oracle quorum</span> —
+              a payout requires corroborating signals from NASA MODIS (NDVI), IMD weather stations,
+              Sentinel-2 imagery, and ICAR soil sensors simultaneously. Requiring consensus across four
+              independent data sources eliminates single-sensor noise and reduces false triggers by design.
+            </p>
+            <p className="text-sm text-white/70 leading-relaxed">
+              Risk scoring is computed at <span className="text-[#64ffda] font-semibold">sub-district granularity</span>
+              (tehsil level where data permits), and trigger thresholds are calibrated per district using
+              historical IMD normals — so a Barmer drought boundary is not the same as a Puri cyclone
+              boundary. Residual basis risk is disclosed in every policy certificate as a known, priced
+              parameter, consistent with IRDAI&apos;s 2023 parametric insurance guidelines.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Stats grid ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           ['🔴', filtered.filter(d=>d.level==='Critical').length, 'Critical','text-red-400'],
           ['🟠', filtered.filter(d=>d.level==='High').length,     'High',    'text-orange-400'],
           ['📊', filtered.length,                                  'Districts','text-[#64ffda]'],
-          ['👨‍🌾', filtered.reduce((s,d)=>s+d.farmers,0).toLocaleString(),'Farmers','text-[#e3b341]'],
+          ['👨\u200d🌾', filtered.reduce((s,d)=>s+d.farmers,0).toLocaleString(),'Farmers','text-[#e3b341]'],
         ].map(([icon,val,lbl,cls],i) => (
           <div key={i} className="glass p-4 text-center">
             <div className="text-xl mb-1">{icon}</div>
@@ -51,6 +88,8 @@ export default function RiskPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Filters ── */}
       <div className="glass p-4 mb-6 flex flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <label className="text-xs text-[#7d8590]">State:</label>
@@ -67,6 +106,8 @@ export default function RiskPage() {
           </select>
         </div>
       </div>
+
+      {/* ── District table ── */}
       <div className="bg-[#161b22] border border-[#21262d] rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -99,6 +140,7 @@ export default function RiskPage() {
           </tbody>
         </table>
       </div>
+
     </div>
   )
 }
