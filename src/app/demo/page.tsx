@@ -12,9 +12,17 @@ interface Policy {
   deploy_tx:string; message:string; upi_debit_ref:string; aadhaar_hash:string; kyc:Record<string,unknown>;
 }
 interface Agent { decision:string; confidence:number; weight:string; deliberation:string[]; }
+
+// oracle_inputs is the real field name returned by /api/oracle/verify
+// Each variable carries value, source (live_today | live_yesterday | cached_baseline | manual_override), and unit
+type OracleSource = 'live_today'|'live_yesterday'|'cached_baseline'|'manual_override';
+interface OracleVar { value:number; source:OracleSource; unit:string; }
+
 interface VerifyResult {
   policy_id:string; district:string; event_type:string; contract_state:CState; payout_amount:number|null;
-  oracle_data:{ sources:Record<string,{value:number;unit:string}>; derived:Record<string,number>; };
+  oracle_inputs:Record<string, OracleVar>;
+  weather_api_url: string|null;
+  weather_api_error: string|null;
   agent_quorum:{ agents:Record<string,Agent>; yes_count:number; total_agents:number; weighted_confidence:number; confidence_pct:number; quorum_met:boolean; quorum_rule:string; };
 }
 interface ExecuteResult {
@@ -45,8 +53,22 @@ const DISTRICTS = ['Barmer','Puri','Latur','Warangal','Nashik','Ludhiana','Jodhp
 const EV_COL: Record<string,string>  = { drought:'#f59e0b', flood:'#38bdf8', heatwave:'#f87171', cyclone:'#a78bfa' };
 const EV_ICO: Record<string,string>  = { drought:'☀️', flood:'🌊', heatwave:'🔥', cyclone:'🌀' };
 const RK_COL: Record<string,string>  = { CRITICAL:'#f87171', HIGH:'#fb923c', MEDIUM:'#fbbf24', LOW:'#4ade80' };
-const ORC_ICO: Record<string,string> = { NASA_MODIS:'🛰️', IMD_Rainfall:'🌧️', ISRO_Bhuvan:'🌡️', ICAR_Sensors:'🌱' };
+const ORC_ICO: Record<string,string> = { rainfall_mm:'🌧️', temp_c:'🌡️', ndvi:'🌱', soil_moisture:'💧' };
 const STATE_COL: Record<CState,string> = { ACTIVE:'#34d399', TRIGGERED:'#fbbf24', FRAUD_REVIEW:'#f97316', EXECUTED:'#4ade80', REJECTED:'#f87171' };
+
+// Source badge colours and labels
+const SRC_COL: Record<OracleSource,string> = {
+  live_today:      '#4ade80',
+  live_yesterday:  '#fbbf24',
+  cached_baseline: '#94a3b8',
+  manual_override: '#a78bfa',
+};
+const SRC_LABEL: Record<OracleSource,string> = {
+  live_today:      '🛰️ live · today',
+  live_yesterday:  '🕐 live · yesterday',
+  cached_baseline: '📦 baseline',
+  manual_override: '✏️ manual',
+};
 
 const HI: Record<string,string> = {
   enroll:'किसान नामांकन',
@@ -60,8 +82,6 @@ const HI: Record<string,string> = {
   ramesh_btn:'रमेश के रूप में नामांकित करें',
 };
 
-// Extracted OUTSIDE the JSX return — SWC misreads CSS `@keyframes x { y{} }` braces
-// as JSX expression boundaries when the template literal sits inside <style>{``}</style>.
 const PAGE_CSS = [
   '@keyframes spin{to{transform:rotate(360deg)}}',
   '@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}',
@@ -488,10 +508,8 @@ export default function DemoPage() {
 
   return (
     <div style={{ minHeight:'100vh',background:'#030712',fontFamily:"'Inter',system-ui,sans-serif",color:'#e2e8f0' }}>
-      {/* PAGE_CSS is a plain string const — avoids SWC JSX bug with `@keyframes x { y{} }` braces */}
       <style>{PAGE_CSS}</style>
 
-      {/* Auto-boot: if ?offline=1 is in URL, fire doRamesh() once on mount */}
       <Suspense fallback={null}>
         <OfflineBoot onOffline={doRamesh} />
       </Suspense>
@@ -616,14 +634,24 @@ export default function DemoPage() {
             {verify && (
               <Card style={{ marginBottom:12 }}>
                 <h2 style={{ fontSize:12,fontWeight:700,marginBottom:10,color:'#e2e8f0' }}>🛰️ Oracle — {verify.district}</h2>
+                {/* ── Oracle variable grid with live-source badges ── */}
                 <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:18 }} className="g4">
-                  {Object.entries(verify.oracle_data.sources).map(([key,s])=>(
-                    <div key={key} style={{ background:'#030712',border:'1px solid #1e293b',borderRadius:8,padding:'9px 10px' }}>
-                      <div style={{ fontSize:9,color:'#64748b',fontWeight:600,marginBottom:2 }}>{ORC_ICO[key]||'📡'} {key}</div>
-                      <div style={{ fontSize:16,fontWeight:900,color:'#e2e8f0' }}>{s.value}</div>
-                      <div style={{ fontSize:9,color:'#475569' }}>{s.unit}</div>
-                    </div>
-                  ))}
+                  {Object.entries(verify.oracle_inputs).map(([key, v])=>{
+                    const src = v.source as OracleSource;
+                    const srcCol   = SRC_COL[src]   ?? '#94a3b8';
+                    const srcLabel = SRC_LABEL[src]  ?? src;
+                    return (
+                      <div key={key} style={{ background:'#030712',border:`1px solid ${src==='live_today'?'#166534':'#1e293b'}`,borderRadius:8,padding:'9px 10px',position:'relative' }}>
+                        <div style={{ fontSize:9,color:'#64748b',fontWeight:600,marginBottom:2 }}>{ORC_ICO[key]||'📡'} {key.replace(/_/g,' ')}</div>
+                        <div style={{ fontSize:16,fontWeight:900,color:'#e2e8f0' }}>{v.value}</div>
+                        <div style={{ fontSize:9,color:'#475569',marginBottom:4 }}>{v.unit}</div>
+                        {/* live source badge */}
+                        <div style={{ display:'inline-block',background:`${srcCol}18`,color:srcCol,border:`1px solid ${srcCol}44`,borderRadius:4,padding:'1px 5px',fontSize:8,fontWeight:700,whiteSpace:'nowrap' }}>
+                          {srcLabel}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
                 <h2 style={{ fontSize:12,fontWeight:700,marginBottom:10,color:'#e2e8f0' }}>🤖 Agent Votes — click to expand deliberation</h2>
                 <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12 }} className="g2">
