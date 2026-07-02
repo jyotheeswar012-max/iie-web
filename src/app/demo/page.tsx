@@ -354,11 +354,16 @@ export default function DemoPage() {
   }, []);
   useEffect(() => { ping(); }, [ping]);
 
-  // Null-guard: if we land on 'verify' or 'execute' without a policy (e.g. hard
-  // refresh mid-flow or ?offline boot race), snap back to enroll before render crash.
+  // Null-guard: snap back to enroll if policy is missing on verify/execute.
   useEffect(() => {
     if ((step === 'verify' || step === 'execute') && !policy) setStep('enroll');
   }, [step, policy]);
+
+  // Null-guard: snap back to verify if verify result is missing on execute step.
+  // Prevents render crash from accessing verify.payout_amount / verify.contract_state.
+  useEffect(() => {
+    if (step === 'execute' && !verify) setStep('verify');
+  }, [step, verify]);
 
   const startTimer = () => { setElapsed(0); timerRef.current = setInterval(()=>setElapsed(e=>e+1), 100); };
   const stopTimer  = () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current=null; } };
