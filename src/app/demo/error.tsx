@@ -1,106 +1,136 @@
 'use client';
+import { useEffect } from 'react';
 
-export default function DemoError({ reset }: { reset: () => void }) {
+export default function DemoError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error('[IIE Demo Error]', error);
+  }, [error]);
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#030712',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'Inter',system-ui,sans-serif",
-      padding: '20px',
-    }}>
-      <div style={{ textAlign: 'center', maxWidth: 460, width: '100%' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#030712',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: "'Inter',system-ui,sans-serif",
+        padding: 24,
+      }}
+    >
+      <div style={{ textAlign: 'center', maxWidth: 520, width: '100%' }}>
 
-        {/* Icon */}
-        <div style={{ fontSize: 52, marginBottom: 14, lineHeight: 1 }}>⚠️</div>
+        <div style={{ fontSize: 44, marginBottom: 16 }}>⚠️</div>
 
-        {/* Title */}
-        <div style={{ fontSize: 22, fontWeight: 900, color: '#fca5a5', marginBottom: 6 }}>
-          IIE Engine Error
-        </div>
+        <h1
+          style={{
+            fontSize: 20,
+            fontWeight: 900,
+            color: '#f87171',
+            marginBottom: 8,
+          }}
+        >
+          Something went wrong
+        </h1>
 
-        {/* Subtitle */}
-        <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: 8 }}>
+        <p
+          style={{
+            color: '#64748b',
+            fontSize: 13,
+            lineHeight: 1.7,
+            marginBottom: error?.message ? 12 : 24,
+          }}
+        >
           An unexpected error occurred in the demo pipeline.
-        </div>
+        </p>
 
-        {/* Offline callout — the key message */}
-        <div style={{
-          background: '#1c1400',
-          border: '1px solid #854d0e',
-          borderRadius: 12,
-          padding: '14px 18px',
-          marginBottom: 24,
-          textAlign: 'left',
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', marginBottom: 6, letterSpacing: '0.05em' }}>
-            📼 OFFLINE DEMO MODE AVAILABLE
-          </div>
-          <div style={{ fontSize: 12, color: '#d1fae5', lineHeight: 1.7 }}>
-            APIs may be down or venue wifi is unstable. <b style={{ color: '#fde68a' }}>Offline Demo Mode</b> runs
-            the identical Enroll → Oracle → Execute → Audit → ML flow using pre-recorded canonical
-            data — <b style={{ color: '#4ade80' }}>zero network required</b>. Judges see the same
-            screens, same numbers, same receipt.
-          </div>
-          <div style={{ marginTop: 10, fontSize: 11, color: '#78716c', fontFamily: 'monospace' }}>
-            Policy: SBI-IIE-00341 · Ramesh Kumar · Flood · ₹48,200 · RRN 924819023741
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a
-            href="/demo?offline=1"
+        {error?.message && (
+          <div
             style={{
-              background: 'linear-gradient(135deg,#92400e,#b45309)',
-              color: '#fde68a',
-              textDecoration: 'none',
+              background: '#0f172a',
+              border: '1px solid #1e293b',
               borderRadius: 10,
-              padding: '11px 22px',
-              fontSize: 13,
-              fontWeight: 800,
-              boxShadow: '0 4px 16px #92400e55',
+              padding: '10px 14px',
+              marginBottom: 24,
+              fontFamily: 'monospace',
+              fontSize: 11,
+              color: '#94a3b8',
+              textAlign: 'left',
+              wordBreak: 'break-word',
+              lineHeight: 1.6,
             }}
           >
-            📼 Run Offline Demo
-          </a>
+            {error.message}
+            {error.digest && (
+              <>
+                <br />
+                <span style={{ color: '#475569' }}>digest: {error.digest}</span>
+              </>
+            )}
+          </div>
+        )}
+
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <button
             onClick={reset}
             style={{
-              background: '#0f172a',
-              color: '#94a3b8',
-              border: '1px solid #1e293b',
+              background: 'linear-gradient(135deg,#065f46,#047857)',
+              color: '#d1fae5',
+              border: 'none',
               borderRadius: 10,
-              padding: '11px 22px',
+              padding: '10px 22px',
               fontSize: 13,
               fontWeight: 700,
               cursor: 'pointer',
             }}
           >
-            ↺ Try Live Again
+            🔄 Try Again
           </button>
+
+          <a
+            href="/demo"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: '#e2e8f0',
+              borderRadius: 10,
+              padding: '10px 22px',
+              fontSize: 13,
+              fontWeight: 700,
+              textDecoration: 'none',
+            }}
+          >
+            ↺ Reload Demo
+          </a>
+
           <a
             href="/"
             style={{
-              background: '#0f172a',
-              color: '#64748b',
-              textDecoration: 'none',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              color: '#94a3b8',
               borderRadius: 10,
-              padding: '11px 22px',
+              padding: '10px 22px',
               fontSize: 13,
               fontWeight: 700,
-              border: '1px solid #1e293b',
+              textDecoration: 'none',
             }}
           >
             ← Home
           </a>
-        </div>
-
-        {/* Engineering maturity note */}
-        <div style={{ marginTop: 24, fontSize: 10, color: '#334155', lineHeight: 1.6 }}>
-          Production systems carry both live and offline paths. This error boundary is intentional — not a bug.
         </div>
 
       </div>
