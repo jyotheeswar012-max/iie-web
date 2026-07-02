@@ -1,0 +1,65 @@
+{
+  "model": "LogisticRegression",
+  "version": "1.0.0",
+  "trained_on": "2026-07-02",
+  "training_rows": 338,
+  "test_rows": 85,
+  "features": [
+    "ndvi",
+    "temp_c",
+    "rainfall_mm",
+    "soil_moisture_pct",
+    "ndvi_z_score",
+    "rain_z_score"
+  ],
+  "scaler": {
+    "mean": [
+      0.37375739644970407,
+      39.415976331360945,
+      80.06360946745562,
+      33.86834319526627,
+      1.2534745562130176,
+      2.2928718934911245
+    ],
+    "std": [
+      0.1113171292914747,
+      5.7349065415976845,
+      70.49750053054778,
+      20.753333750316827,
+      1.0144523931617822,
+      1.909521084450628
+    ]
+  },
+  "coefficients": [
+    0.40270844658901145,
+    2.085244241988784,
+    2.0714522516801908,
+    0.044659920007907666,
+    0.6445292890244991,
+    0.909621617484152
+  ],
+  "intercept": 0.8680730777495188,
+  "feature_importance": {
+    "ndvi": 0.065394,
+    "temp_c": 0.338612,
+    "rainfall_mm": 0.336372,
+    "soil_moisture_pct": 0.007252,
+    "ndvi_z_score": 0.104662,
+    "rain_z_score": 0.147709
+  },
+  "metrics": {
+    "roc_auc": 0.8333,
+    "precision": 0.7879,
+    "recall": 0.9123,
+    "f1": 0.8455,
+    "accuracy": 0.7765
+  },
+  "confusion_matrix": {
+    "tn": 14,
+    "fp": 14,
+    "fn": 5,
+    "tp": 52
+  },
+  "trigger_threshold": 0.55,
+  "note": "Logistic Regression chosen for full SHAP interpretability. Coefficients exported for edge-runtime dot-product inference. SHAP = coef_i * (x_i - mean_i) / std_i (exact LinearExplainer). Trained on 423 district-season rows calibrated to IMD/ICAR published ranges."
+}
