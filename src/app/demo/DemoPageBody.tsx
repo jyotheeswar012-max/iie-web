@@ -49,7 +49,10 @@ export default function DemoPage(){
     setLoading(true);startTimer();
     try{
       const p=await post('/api/oracle/enroll',{...f,acreage:4.5});setPolicy(p);setStep('verify');
-      const v=await post('/api/oracle/verify',{policy_id:p.policy_id,event_type:'drought',district:'Barmer',crop:'wheat',acreage:4.5});setVerify(v);setStep('execute');
+      const v=await post('/api/oracle/verify',{policy_id:p.policy_id,event_type:'drought',district:'Barmer',crop:'wheat',acreage:4.5});
+      // null-guard: only read agent_quorum fields if they exist
+      if(!v?.agent_quorum) throw new Error('Oracle verify response missing agent_quorum');
+      setVerify(v);setStep('execute');
       const x=await post('/api/contract/execute',{policy_id:p.policy_id,farmer_name:'Ramesh Kumar',payout_amount:v.payout_amount,...(forceState?{force_state:forceState}:{})});setExecute(x);setStep('audit');
       if((x.current_state??'EXECUTED')==='EXECUTED')setShowModal(true);
       ping();
@@ -65,7 +68,12 @@ export default function DemoPage(){
   };
   const doVerify=async()=>{
     if(!policy)return;setLoading(true);setError('');startTimer();
-    try{const d=await post('/api/oracle/verify',{policy_id:policy.policy_id,event_type:form.event_type,district:form.district,crop:form.crop,acreage:parseFloat(form.acreage)});setVerify(d);setStep('execute');}catch(e:unknown){setError(e instanceof Error?e.message:'Error');}
+    try{
+      const d=await post('/api/oracle/verify',{policy_id:policy.policy_id,event_type:form.event_type,district:form.district,crop:form.crop,acreage:parseFloat(form.acreage)});
+      // null-guard: ensure agent_quorum is present before storing
+      if(!d?.agent_quorum) throw new Error('Oracle verify response missing agent_quorum');
+      setVerify(d);setStep('execute');
+    }catch(e:unknown){setError(e instanceof Error?e.message:'Error');}
     stopTimer();setLoading(false);
   };
   const doExecute=async()=>{
@@ -258,20 +266,24 @@ export default function DemoPage(){
                     </div>);
                   })}
                 </div>
-                <h2 style={{fontSize:12,fontWeight:700,marginBottom:10,color:'#e2e8f0'}}>🤖 Agent Votes</h2>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}} className="g2">
-                  {Object.entries(verify.agent_quorum.agents).map(([name,a],i)=><AgentBar key={name} name={name} a={a} delay={i*300} />)}
-                </div>
-                <div style={{background:verify.agent_quorum.quorum_met?'#052e16':'#2d0a0a',border:`1px solid ${verify.agent_quorum.quorum_met?'#166534':'#7f1d1d'}`,borderRadius:10,padding:'11px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:13,color:'#e2e8f0'}}>Weighted Confidence: <span style={{color:verify.agent_quorum.quorum_met?'#4ade80':'#f87171'}}>{verify.agent_quorum.weighted_confidence}%</span></div>
-                    <div style={{fontSize:10,color:'#64748b',marginTop:1}}>{verify.agent_quorum.yes_count}/{verify.agent_quorum.total_agents} YES · {verify.agent_quorum.quorum_rule}</div>
-                  </div>
-                  <div style={{textAlign:'right'}}>
-                    <Dot s={verify.contract_state} />
-                    {verify.payout_amount&&<div style={{fontSize:13,fontWeight:700,color:'#4ade80',marginTop:2}}>₹{verify.payout_amount.toLocaleString()} queued</div>}
-                  </div>
-                </div>
+                {verify.agent_quorum&&(
+                  <>
+                    <h2 style={{fontSize:12,fontWeight:700,marginBottom:10,color:'#e2e8f0'}}>🤖 Agent Votes</h2>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}} className="g2">
+                      {Object.entries(verify.agent_quorum.agents).map(([name,a],i)=><AgentBar key={name} name={name} a={a} delay={i*300} />)}
+                    </div>
+                    <div style={{background:verify.agent_quorum.quorum_met?'#052e16':'#2d0a0a',border:`1px solid ${verify.agent_quorum.quorum_met?'#166534':'#7f1d1d'}`,borderRadius:10,padding:'11px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:13,color:'#e2e8f0'}}>Weighted Confidence: <span style={{color:verify.agent_quorum.quorum_met?'#4ade80':'#f87171'}}>{verify.agent_quorum.weighted_confidence}%</span></div>
+                        <div style={{fontSize:10,color:'#64748b',marginTop:1}}>{verify.agent_quorum.yes_count}/{verify.agent_quorum.total_agents} YES · {verify.agent_quorum.quorum_rule}</div>
+                      </div>
+                      <div style={{textAlign:'right'}}>
+                        <Dot s={verify.contract_state} />
+                        {verify.payout_amount&&<div style={{fontSize:13,fontWeight:700,color:'#4ade80',marginTop:2}}>₹{verify.payout_amount.toLocaleString()} queued</div>}
+                      </div>
+                    </div>
+                  </>
+                )}
               </Card>
             )}
             <div style={{display:'flex',gap:8,justifyContent:'flex-end',flexWrap:'wrap'}}>
@@ -293,7 +305,7 @@ export default function DemoPage(){
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
                   <div>
                     <div style={{fontWeight:700,fontSize:14,color:'#fef3c7',fontFamily:'monospace'}}>{verify.policy_id}</div>
-                    <div style={{fontSize:11,color:'#94a3b8',marginTop:3}}>Event: <Badge label={verify.event_type} color={EV_COL[verify.event_type]} /> · <b style={{color:'#e2e8f0'}}>{verify.agent_quorum.weighted_confidence}%</b></div>
+                    <div style={{fontSize:11,color:'#94a3b8',marginTop:3}}>Event: <Badge label={verify.event_type} color={EV_COL[verify.event_type]} /> · <b style={{color:'#e2e8f0'}}>{verify.agent_quorum?.weighted_confidence ?? '—'}%</b></div>
                   </div>
                   <div style={{textAlign:'right'}}>
                     <Dot s={verify.contract_state} />
