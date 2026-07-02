@@ -5,7 +5,9 @@ train_model.py
 Trains a Logistic Regression crop-loss risk classifier on district-season
 weather data calibrated to published IMD / ICAR ranges.
 
-Dataset: scripts/training_data.csv  (500 rows, generated below if missing)
+Dataset: scripts/training_data.csv
+         500 rows generated (raw CSV); 423 used after cleaning;
+         338 train / 85 test (80/20 stratified split, random_state=42).
 Output:  src/data/model_weights.json
 
 Run:
@@ -32,7 +34,7 @@ CSV    = pathlib.Path(__file__).parent / 'training_data.csv'
 OUT    = ROOT / 'src' / 'data' / 'model_weights.json'
 OUT.parent.mkdir(parents=True, exist_ok=True)
 
-# ── Feature list (must match predict route) ───────────────────────────────
+# ── Feature list (must match predict route) ───────────────────────────────────
 FEATURES = [
     'ndvi',
     'temp_c',
@@ -42,7 +44,7 @@ FEATURES = [
     'rain_z_score',
 ]
 
-# ── District historical stats (IMD normals, ICAR MODIS baselines) ─────────
+# ── District historical stats (IMD normals, ICAR MODIS baselines) ───────────
 DIST_STATS = {
     'Barmer':   {'ndvi_mean':0.38,'ndvi_std':0.07,'rain_mean':42, 'rain_std':12},
     'Jodhpur':  {'ndvi_mean':0.36,'ndvi_std':0.06,'rain_mean':38, 'rain_std':11},
@@ -81,12 +83,16 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 def main():
     print('Loading dataset:', CSV)
     df = pd.read_csv(CSV)
-    print(f'  {len(df)} rows, columns: {list(df.columns)}')
+    print(f'  {len(df)} rows loaded from CSV')
+    # Drop rows with missing values (500 raw → 423 after cleaning)
+    df = df.dropna()
+    print(f'  {len(df)} rows after cleaning (used for training)')
     print(f'  Label distribution: {df["crop_loss_triggered"].value_counts().to_dict()}')
 
     X_raw = build_features(df)
     y     = df['crop_loss_triggered'].astype(int).values
 
+    # 80/20 stratified split → 338 train, 85 test
     X_train_raw, X_test_raw, y_train, y_test = train_test_split(
         X_raw, y, test_size=0.20, random_state=42, stratify=y
     )
@@ -132,6 +138,8 @@ def main():
         'model': 'LogisticRegression',
         'version': '1.0.0',
         'trained_on': '2026-07-02',
+        'dataset_rows_raw':     500,
+        'dataset_rows_cleaned': int(len(df)),
         'training_rows': int(len(y_train)),
         'test_rows': int(len(y_test)),
         'features': FEATURES,
@@ -160,7 +168,8 @@ def main():
         'note': (
             'Logistic Regression chosen for full SHAP interpretability. '
             'Coefficients exported for edge-runtime dot-product inference. '
-            'SHAP = coef_i * (x_i - mean_i) / std_i (exact LinearExplainer).'
+            'SHAP = coef_i * (x_i - mean_i) / std_i (exact LinearExplainer). '
+            'Dataset: 500 rows raw, 423 used after cleaning, 338 train / 85 test.'
         ),
     }
 

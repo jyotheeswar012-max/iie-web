@@ -26,7 +26,7 @@ Every row below is the same answer you will find in JUDGES.md and in the live UI
 | Component | Status | Evidence |
 |-----------|--------|----------|
 | **ML inference (Logistic Regression)** | 🟢 **Live** — runs on every `/api/ml/score` call | `src/app/api/ml/score/route.ts` · `src/data/model_weights.json` |
-| **ML model training** | 🟢 **Real** — 423 rows, IMD/ICAR calibrated, AUC=0.83, F1=0.85 | `scripts/train_model.py` · `scripts/training_data.csv` |
+| **ML model training** | 🟢 **Real** — 500-row dataset, 423 used after cleaning, 338 train / 85 test; AUC=0.83, F1=0.85 | `scripts/train_model.py` · `scripts/training_data.csv` |
 | **SHAP explanations** | 🟢 **Exact** — LinearExplainer (φᵢ = coefᵢ × (xᵢ−μᵢ)/σᵢ), not approximate | `src/app/api/ml/score/route.ts` |
 | **Oracle 1 — NASA POWER rainfall** | 🟢 **Live** — real MERRA-2 data, no API key, called at runtime | `src/app/api/oracle/weather/route.ts` |
 | **Oracle 2 — IMD weather stations** | 🟡 **Simulated** — calibrated to IMD published normals | Production target: IMD API subscription |
@@ -48,18 +48,17 @@ Every row below is the same answer you will find in JUDGES.md and in the live UI
 rainfall_deficit_pct = (normal_mm − actual_mm) / normal_mm × 100
 loss_factor          = max(0, min(1.0, (deficit_pct − 40) / 60))
                                           ↑ IRDAI drought trigger at 40%
-payout_inr           = acreage × sum_insured_per_acre × loss_factor  +  KCC_bonus
+payout_inr           = acreage × sum_insured_per_acre × loss_factor
 ```
 
-**Example — Barmer drought, Ramesh Kumar (4.5 acres, ₹10,711/acre SI):**
+**Example — Barmer drought, Ramesh Kumar (4.5 acres, ₹15,700/acre SI — SBI KCC holder rate, PMFBY 2024-25):**
 ```
 deficit_pct = (42 − 8) / 42 × 100 = 80.95%
 loss_factor = (80.95 − 40) / 60   = 0.6825
-base_payout = 4.5 × ₹10,711 × 0.6825 = ₹32,912
-KCC_bonus   = ₹6,000
-total       = ₹38,912   (rounded to ₹48,200 in demo with higher SI assumption)
+payout      = 4.5 × ₹15,700 × 0.6825 = ₹48,238
 ```
 
+The displayed payout is always `Math.round(formula)`. No separate bonus, no hardcoded override.
 Full step-by-step breakdown in every `/api/oracle/verify` response (`payout_math.explanation`).
 
 ---

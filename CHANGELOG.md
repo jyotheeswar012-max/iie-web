@@ -9,11 +9,25 @@ Format: [Semantic Versioning](https://semver.org/) | [Keep a Changelog](https://
 
 ---
 
+## [4.1.0] — 2026-07-02
+
+### Fixed
+- `fix(payout)`: Payout formula and displayed receipt now always match.
+  SI changed from ₹10,711 → **₹15,700/acre** (SBI KCC holder rate, PMFBY 2024-25).
+  `kcc_bonus` fudge parameter removed entirely.
+  Formula: `4.5 × ₹15,700 × 0.6825 = ₹48,238` — the displayed number IS `Math.round(formula)`.
+- `fix(docs)`: Dataset row counts now consistent across all files:
+  **500 rows raw → 423 used after cleaning → 338 train / 85 test**.
+  Previously README said "423", train_model.py said "500", CHANGELOG said "423".
+
+---
+
 ## [4.0.0] — 2026-07-02
 
 ### Added
-- `feat(ml)`: Real Logistic Regression trained on 423 district-season rows
-  calibrated to published IMD / ICAR ranges
+- `feat(ml)`: Real Logistic Regression trained on a 500-row dataset
+  (423 used after cleaning, 338 train / 85 test — 80/20 stratified split)
+  calibrated to published IMD / ICAR ranges.
   → `scripts/train_model.py` (reproducible, run in 30 seconds)
   → `scripts/training_data.csv` (500 rows, 9 districts, 4 event types)
 - `feat(ml)`: Exported model weights in `src/data/model_weights.json`
@@ -21,10 +35,10 @@ Format: [Semantic Versioning](https://semver.org/) | [Keep a Changelog](https://
 - `feat(ml)`: Rewrote `src/app/api/ml/predict/route.ts` as pure TypeScript
   edge inference: StandardScaler → dot-product → sigmoid → exact SHAP
 - `feat(ml)`: Real held-out metrics (20% test set, 85 rows):
-  AUC = 0.8333, Precision = 0.7879, Recall = 0.9123, F1 = 0.8455
+  AUC = 0.8333, Precision = 0.7879, Recall = 0.9123, F1 = 0.8455
 - `feat(risk)`: Basis risk & moral hazard disclosure section on `/risk`
   (definition → 4-oracle mitigation → IRDAI 2023 compliance)
-- `fix(docs)`: `JUDGES.md` — every claim labelled ✅ Real or ⚠️ Simulated;
+- `fix(docs)`: `JUDGES.md` — every claim labelled ✅ Real or ⚠️ Simulated;
   self-score table removed
 - `fix(docs)`: `CHANGELOG.md` — removed references to files that were
   never committed to this repo
