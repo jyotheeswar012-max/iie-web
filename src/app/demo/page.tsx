@@ -56,6 +56,18 @@ const RK_COL: Record<string,string>  = { CRITICAL:'#f87171', HIGH:'#fb923c', MED
 const ORC_ICO: Record<string,string> = { rainfall_mm:'🌧️', temp_c:'🌡️', ndvi:'🌱', soil_moisture:'💧' };
 const STATE_COL: Record<CState,string> = { ACTIVE:'#34d399', TRIGGERED:'#fbbf24', FRAUD_REVIEW:'#f97316', EXECUTED:'#4ade80', REJECTED:'#f87171' };
 
+// Per-district sensor baseline defaults (used only if oracle/verify wasn't run yet)
+const DIST_DEFAULTS: Record<string,{ndvi:number;temp_c:number;rainfall_mm:number;soil_moisture:number}> = {
+  Barmer:   {ndvi:0.21,temp_c:47.2,rainfall_mm:8,  soil_moisture:12},
+  Jodhpur:  {ndvi:0.19,temp_c:48.1,rainfall_mm:6,  soil_moisture:10},
+  Puri:     {ndvi:0.68,temp_c:34.1,rainfall_mm:218,soil_moisture:78},
+  Latur:    {ndvi:0.28,temp_c:46.8,rainfall_mm:22, soil_moisture:16},
+  Warangal: {ndvi:0.31,temp_c:45.9,rainfall_mm:44, soil_moisture:22},
+  Nashik:   {ndvi:0.34,temp_c:44.2,rainfall_mm:38, soil_moisture:19},
+  Ludhiana: {ndvi:0.52,temp_c:38.5,rainfall_mm:180,soil_moisture:55},
+  Adilabad: {ndvi:0.29,temp_c:46.1,rainfall_mm:31, soil_moisture:18},
+};
+
 // Source badge colours and labels
 const SRC_COL: Record<OracleSource,string> = {
   live_today:      '#4ade80',
@@ -360,7 +372,6 @@ export default function DemoPage() {
   }, [step, policy]);
 
   // Null-guard: snap back to verify if verify result is missing on execute step.
-  // Prevents render crash from accessing verify.payout_amount / verify.contract_state.
   useEffect(() => {
     if (step === 'execute' && !verify) setStep('verify');
   }, [step, verify]);
@@ -434,33 +445,37 @@ export default function DemoPage() {
   const doML = async () => {
     setLoading(true); setError(''); startTimer();
     try {
-      const fd  = await (await fetch('/api/oracle/feed')).json();
-      const row = fd.districts?.[0];
-      if (row) {
-        const pred = await post('/api/ml/predict', {
-          district:          row.district,
-          ndvi:              row.ndvi,
-          temp_c:            row.temp_c,
-          rainfall_mm:       row.rainfall_mm,
-          soil_moisture_pct: row.soil_moisture,
-        });
-        const contributions = (pred.contributions ?? {}) as Record<string,RawContrib>;
-        const log_likelihoods: Record<string,{llr:number;weight:string;label:string}> = {};
-        for (const [feat, c] of Object.entries(contributions)) {
-          log_likelihoods[feat] = {
-            llr:    +(c as RawContrib).raw_contrib.toFixed(3),
-            weight: `${((c as RawContrib).importance * 100).toFixed(1)}%`,
-            label:  (c as RawContrib).direction ?? ((c as RawContrib).raw_contrib > 0 ? 'risk↑' : 'risk↓'),
-          };
-        }
-        const total_llr      = +(pred.raw_score ?? 0).toFixed(3);
-        const confidence_pct = +((pred.probability ?? pred.risk_score / 100) * 100).toFixed(1);
-        const modelObj       = pred.model ?? {};
-        const modelStr: string = modelObj.name
-          ? `${modelObj.name} v${modelObj.version} · ${modelObj.rounds} rounds · AUC ${modelObj.roc_auc}`
-          : String(modelObj);
-        setMl({ risk_score:pred.risk_score, risk_level:pred.risk_level, triggered:pred.triggered, confidence_pct, log_likelihoods, total_llr, flags:pred.flags??[], model:modelStr, recommendation:pred.recommendation??'' });
+      // ── BUG FIX: use the ACTUAL enrolled district + oracle sensor values, not feed districts[0] ──
+      // Priority: live oracle_inputs (from verify step) > DIST_DEFAULTS > hardcoded Barmer fallback.
+      const oi = verify?.oracle_inputs;
+      const defaults = DIST_DEFAULTS[form.district] ?? DIST_DEFAULTS['Barmer'];
+      const mlPayload = {
+        district:          form.district,
+        event_type:        form.event_type,
+        ndvi:              oi?.ndvi?.value              ?? defaults.ndvi,
+        temp_c:            oi?.temp_c?.value            ?? defaults.temp_c,
+        rainfall_mm:       oi?.rainfall_mm?.value       ?? defaults.rainfall_mm,
+        soil_moisture_pct: oi?.soil_moisture?.value     ?? defaults.soil_moisture,
+      };
+      const pred = await post('/api/ml/predict', mlPayload);
+      const contributions = (pred.contributions ?? {}) as Record<string,RawContrib>;
+      const log_likelihoods: Record<string,{llr:number;weight:string;label:string}> = {};
+      for (const [feat, c] of Object.entries(contributions)) {
+        log_likelihoods[feat] = {
+          llr:    +(c as RawContrib).raw_contrib.toFixed(3),
+          weight: `${((c as RawContrib).importance * 100).toFixed(1)}%`,
+          label:  (c as RawContrib).direction ?? ((c as RawContrib).raw_contrib > 0 ? 'risk↑' : 'risk↓'),
+        };
       }
+      const total_llr      = +(pred.logit ?? 0).toFixed(3);
+      const confidence_pct = +((pred.probability ?? pred.risk_score / 100) * 100).toFixed(1);
+      const modelObj       = pred.model ?? {};
+      const modelStr: string = modelObj.name
+        ? `${modelObj.name} v${modelObj.version} · AUC ${modelObj.roc_auc} · F1 ${modelObj.f1_score}`
+        : String(modelObj);
+      setMl({ risk_score:pred.risk_score, risk_level:pred.risk_level, triggered:pred.triggered, confidence_pct, log_likelihoods, total_llr, flags:pred.flags??[], model:modelStr, recommendation:pred.recommendation??'' });
+
+      // Training metrics — from /api/ml/train if available
       const tdRaw = await fetch('/api/ml/train').then(r => r.json()).catch(() => null);
       if (tdRaw) {
         const gb = tdRaw.final_metrics?.GradientBoosting ?? {};
@@ -586,285 +601,4 @@ export default function DemoPage() {
                   <select value={forceState} onChange={e=>setForceState(e.target.value as ForceState)} style={inp()}>
                     <option value=''>Normal EXECUTED path</option>
                     <option value='FRAUD_REVIEW'>Force FRAUD_REVIEW</option>
-                    <option value='REJECTED'>Force REJECTED</option>
-                  </select>
-                </div>
-                <div style={{ background:forceState==='FRAUD_REVIEW'?'#1c0a00':forceState==='REJECTED'?'#2d0a0a':'#052e16',border:`1px solid ${forceState==='FRAUD_REVIEW'?'#9a3412':forceState==='REJECTED'?'#7f1d1d':'#166634'}`,borderRadius:10,padding:'12px 14px' }}>
-                  <div style={{ fontSize:10,color:forceState==='FRAUD_REVIEW'?'#f97316':forceState==='REJECTED'?'#f87171':'#4ade80',fontWeight:700,marginBottom:5,letterSpacing:'0.04em' }}>📊 DEMO MODE</div>
-                  <div style={{ fontSize:12,color:'#94a3b8' }}>
-                    {forceState==='FRAUD_REVIEW'?'Shows orange review path before final settlement.'
-                    :forceState==='REJECTED'?'Shows failed transition and claim rejection path.'
-                    :'Shows standard TRIGGERED → EXECUTED payout flow.'}
-                  </div>
-                </div>
-              </Card>
-            </div>
-            <div style={{ marginTop:14,display:'flex',justifyContent:'flex-end' }}>
-              <button onClick={doEnroll} disabled={loading}
-                style={{ background:loading?'#1e293b':'linear-gradient(135deg,#065f46,#047857)',color:loading?'#475569':'#d1fae5',border:'none',borderRadius:10,padding:'11px 26px',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:8,boxShadow:loading?'none':'0 4px 16px #065f4666' }}>
-                {loading && <Spin/>} {loading?(hindi?HI.loading:'Enrolling…'):(hindi?'🚀 पोलिसी जारी करें':'🚀 Issue Policy & Deploy Contract')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step==='verify' && policy && (
-          <div className="fi">
-            <h1 style={{ fontSize:20,fontWeight:800,marginBottom:3,color:'#f1f5f9' }}>{hindi?'🛰️ ओरेकल + AI कोरम':'🛰️ Step 2 — Oracle + AI Quorum'}</h1>
-            <p style={{ color:'#64748b',fontSize:12,marginBottom:16 }}>{hindi?'4 स्रोत · 4 विशेषज्ञ एजेंट · ≥75% भार विश्वास':'4 independent sources · 4 specialist agents · ≥75% weighted confidence required.'}</p>
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12 }} className="g2">
-              <Card style={{ background:'#052e16',border:'1px solid #166534' }}>
-                <div style={{ fontSize:10,color:'#4ade80',fontWeight:700,marginBottom:7,letterSpacing:'0.05em' }}>✅ POLICY ISSUED</div>
-                <div style={{ fontSize:17,fontWeight:900,fontFamily:'monospace',marginBottom:8,color:'#d1fae5' }}>{policy.policy_id}</div>
-                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:5,marginBottom:7 }}>
-                  {[['Coverage','₹'+policy.coverage_inr.toLocaleString()],['Net Premium','₹'+policy.net_premium_inr.toLocaleString()],['PM-FASAL','₹'+policy.subsidy_applied.toLocaleString()],['Block',String(policy.block_deployed)]].map(([k,v])=>(
-                    <div key={k}><div style={{ fontSize:9,color:'#64748b' }}>{k}</div><div style={{ fontSize:11,fontWeight:700,color:'#e2e8f0' }}>{v}</div></div>
-                  ))}
-                </div>
-                <div style={{ fontSize:9,color:'#64748b' }}>Contract: <Chip h={policy.contract_address} /></div>
-              </Card>
-              <Card>
-                <h2 style={{ fontSize:12,fontWeight:700,marginBottom:10,color:'#e2e8f0' }}>{hindi?'घटना का प्रकार':'Event Type'}</h2>
-                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8 }}>
-                  {EVENTS.map(ev=>(
-                    <button key={ev} onClick={()=>setForm(f=>({...f,event_type:ev}))} aria-pressed={form.event_type===ev}
-                      style={{ border:`2px solid ${form.event_type===ev?EV_COL[ev]:'#1e293b'}`,background:form.event_type===ev?`${EV_COL[ev]}18`:'#0f172a',borderRadius:10,padding:'10px 6px',transition:'all 0.18s',color:'#e2e8f0' }}>
-                      <div style={{ fontSize:20,marginBottom:3 }}>{EV_ICO[ev]}</div>
-                      <div style={{ fontSize:11,fontWeight:700,color:form.event_type===ev?EV_COL[ev]:'#94a3b8',textTransform:'capitalize' }}>{ev}</div>
-                    </button>
-                  ))}
-                </div>
-              </Card>
-            </div>
-            {verify && (
-              <Card style={{ marginBottom:12 }}>
-                <h2 style={{ fontSize:12,fontWeight:700,marginBottom:10,color:'#e2e8f0' }}>🛰️ Oracle — {verify.district}</h2>
-                {/* ── Oracle variable grid with live-source badges ── */}
-                <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:18 }} className="g4">
-                  {Object.entries(verify.oracle_inputs).map(([key, v])=>{
-                    const src = v.source as OracleSource;
-                    const srcCol   = SRC_COL[src]   ?? '#94a3b8';
-                    const srcLabel = SRC_LABEL[src]  ?? src;
-                    return (
-                      <div key={key} style={{ background:'#030712',border:`1px solid ${src==='live_today'?'#166534':'#1e293b'}`,borderRadius:8,padding:'9px 10px',position:'relative' }}>
-                        <div style={{ fontSize:9,color:'#64748b',fontWeight:600,marginBottom:2 }}>{ORC_ICO[key]||'📡'} {key.replace(/_/g,' ')}</div>
-                        <div style={{ fontSize:16,fontWeight:900,color:'#e2e8f0' }}>{v.value}</div>
-                        <div style={{ fontSize:9,color:'#475569',marginBottom:4 }}>{v.unit}</div>
-                        {/* live source badge */}
-                        <div style={{ display:'inline-block',background:`${srcCol}18`,color:srcCol,border:`1px solid ${srcCol}44`,borderRadius:4,padding:'1px 5px',fontSize:8,fontWeight:700,whiteSpace:'nowrap' }}>
-                          {srcLabel}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <h2 style={{ fontSize:12,fontWeight:700,marginBottom:10,color:'#e2e8f0' }}>🤖 Agent Votes — click to expand deliberation</h2>
-                <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12 }} className="g2">
-                  {Object.entries(verify.agent_quorum.agents).map(([name,a],i)=><AgentBar key={name} name={name} a={a} delay={i*300} />)}
-                </div>
-                <div style={{ background:verify.agent_quorum.quorum_met?'#052e16':'#2d0a0a',border:`1px solid ${verify.agent_quorum.quorum_met?'#166534':'#7f1d1d'}`,borderRadius:10,padding:'11px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8 }}>
-                  <div>
-                    <div style={{ fontWeight:700,fontSize:13,color:'#e2e8f0' }}>Weighted Confidence: <span style={{ color:verify.agent_quorum.quorum_met?'#4ade80':'#f87171' }}>{verify.agent_quorum.weighted_confidence}%</span></div>
-                    <div style={{ fontSize:10,color:'#64748b',marginTop:1 }}>{verify.agent_quorum.yes_count}/{verify.agent_quorum.total_agents} YES · {verify.agent_quorum.quorum_rule}</div>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <Dot s={verify.contract_state} />
-                    {verify.payout_amount && <div style={{ fontSize:13,fontWeight:700,color:'#4ade80',marginTop:2 }}>₹{verify.payout_amount.toLocaleString()} queued</div>}
-                  </div>
-                </div>
-              </Card>
-            )}
-            <div style={{ display:'flex',gap:8,justifyContent:'flex-end',flexWrap:'wrap' }}>
-              <button onClick={doVerify} disabled={loading}
-                style={{ background:loading?'#1e293b':'linear-gradient(135deg,#1e3a8a,#1d4ed8)',color:loading?'#475569':'#dbeafe',border:'none',borderRadius:10,padding:'11px 22px',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:7,boxShadow:loading?'none':'0 4px 14px #1d4ed844' }}>
-                {loading && <Spin/>} {loading?(hindi?HI.loading:'Running…'):'🛰️ Run Oracle + Agent Quorum'}
-              </button>
-              {verify && <button onClick={()=>setStep('execute')} style={{ background:'linear-gradient(135deg,#92400e,#b45309)',color:'#fde68a',border:'none',borderRadius:10,padding:'11px 22px',fontSize:12,fontWeight:700 }}>⚡ Execute →</button>}
-            </div>
-          </div>
-        )}
-
-        {step==='execute' && (
-          <div className="fi">
-            <h1 style={{ fontSize:20,fontWeight:800,marginBottom:3,color:'#f1f5f9' }}>{hindi?'⚡ स्मार्ट कॉन्ट्रैक्ट':'⚡ Step 3 — Execute Smart Contract'}</h1>
-            <p style={{ color:'#64748b',fontSize:12,marginBottom:16 }}>FSM demo: ACTIVE → TRIGGERED → EXECUTED | FRAUD_REVIEW | REJECTED</p>
-            {verify && (
-              <Card style={{ background:'#1c1400',border:'1px solid #854d0e',marginBottom:12 }}>
-                <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8 }}>
-                  <div>
-                    <div style={{ fontWeight:700,fontSize:14,color:'#fef3c7',fontFamily:'monospace' }}>{verify.policy_id}</div>
-                    <div style={{ fontSize:11,color:'#94a3b8',marginTop:3 }}>Event: <Badge label={verify.event_type} color={EV_COL[verify.event_type]} /> · <b style={{ color:'#e2e8f0' }}>{verify.agent_quorum.weighted_confidence}%</b></div>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <Dot s={verify.contract_state} />
-                    {verify.payout_amount && <div style={{ fontSize:22,fontWeight:900,color:'#4ade80',marginTop:2 }}>₹{verify.payout_amount.toLocaleString()}</div>}
-                  </div>
-                </div>
-              </Card>
-            )}
-            <FSMPath current={fsmCurrent} previous={execute?.previous_state ?? (execute ? 'TRIGGERED' : undefined)} />
-            {execute && (
-              <Card className="fi cel"
-                style={{ background:(execute.current_state==='FRAUD_REVIEW')?'#1c0a00':(execute.current_state==='REJECTED')?'#2d0a0a':'#052e16',border:`1px solid ${(execute.current_state==='FRAUD_REVIEW')?'#9a3412':(execute.current_state==='REJECTED')?'#7f1d1d':'#166534'}`,marginTop:12,marginBottom:12,animation:execute.current_state==='FRAUD_REVIEW'?'fraudPulse 1.2s ease-in-out infinite':undefined }}>
-                <div style={{ fontSize:14,fontWeight:800,color:STATE_COL[(execute.current_state||'EXECUTED') as CState],marginBottom:12 }}>
-                  {execute.current_state==='FRAUD_REVIEW'?'🕵️ Claim diverted to FRAUD_REVIEW'
-                  :execute.current_state==='REJECTED'?'❌ Claim rejected by FSM path'
-                  :'✅ Payout Executed On-Chain + IMPS Credited'}
-                </div>
-                <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:7,marginBottom:12 }} className="g3">
-                  {([['Payout','₹'+execute.payout_inr.toLocaleString(),'#4ade80'],['Method',execute.method,'#38bdf8'],['Farmer',execute.farmer,'#e2e8f0'],['UPI Ref',execute.upi_ref,'#a78bfa'],['RRN',execute.rrn,'#34d399'],['Block',String(execute.block_number),'#fbbf24']] as [string,string,string][]).map(([k,v,c])=>(
-                    <div key={k} style={{ background:'#030712',borderRadius:8,padding:'7px 9px',border:'1px solid #1e293b' }}>
-                      <div style={{ fontSize:9,color:'#475569',marginBottom:1 }}>{k}</div>
-                      <div style={{ fontSize:11,fontWeight:700,color:c,fontFamily:'monospace',wordBreak:'break-all' }}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background:'#030712',border:'1px solid #1e293b',borderRadius:10,padding:'9px 12px' }}>
-                  <div style={{ fontSize:9,color:'#475569',fontWeight:700,marginBottom:3,letterSpacing:'0.04em' }}>{hindi?HI.sms_label:'📱 SMS SENT TO FARMER'}</div>
-                  <div style={{ fontSize:11,color:'#d1fae5',lineHeight:1.7,fontFamily:'monospace' }}>{execute.sms_sent}</div>
-                </div>
-              </Card>
-            )}
-            <div style={{ display:'flex',gap:8,justifyContent:'flex-end',flexWrap:'wrap' }}>
-              {!execute && (
-                <button onClick={doExecute} disabled={loading}
-                  style={{ background:loading?'#1e293b':'linear-gradient(135deg,#065f46,#047857)',color:loading?'#475569':'#d1fae5',border:'none',borderRadius:10,padding:'11px 26px',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:8,boxShadow:loading?'none':'0 4px 16px #065f4666' }}>
-                  {loading && <Spin/>} {loading?(hindi?HI.loading:'Executing…'):'⚡ Execute Contract Path'}
-                </button>
-              )}
-              {execute && execute.current_state==='EXECUTED' && (
-                <button onClick={()=>setShowModal(true)} style={{ background:'linear-gradient(135deg,#065f46,#059669)',color:'#d1fae5',border:'none',borderRadius:10,padding:'11px 18px',fontSize:12,fontWeight:700 }}>🎉 View Payout</button>
-              )}
-              {execute && (
-                <button onClick={doAudit} disabled={loading} style={{ background:'linear-gradient(135deg,#4c1d95,#6d28d9)',color:'#ede9fe',border:'none',borderRadius:10,padding:'11px 20px',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:7 }}>
-                  {loading && <Spin/>}🔗 Audit →
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {step==='audit' && (
-          <div className="fi">
-            <h1 style={{ fontSize:20,fontWeight:800,marginBottom:3,color:'#f1f5f9' }}>{hindi?'🔗 SHA-256 ऑडिट शृंखला':'🔗 Step 4 — Tamper-Evident Audit Chain'}</h1>
-            <p style={{ color:'#64748b',fontSize:12,marginBottom:16 }}>{hindi?'प्रत्येक प्रविष्टि पिछले SHA-256 हैश से जुड़ी — अपरिवर्तनीय':'SHA-256 chained. Every entry links to predecessor — any mutation is instantly detectable.'}</p>
-            {audit && (
-              <Card style={{ marginBottom:12 }}>
-                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8 }}>
-                  <div>
-                    <div style={{ fontSize:14,fontWeight:800,color:'#e2e8f0' }}>Audit Ledger</div>
-                    <div style={{ fontSize:11,color:'#64748b' }}>{audit.total_entries} entries · SHA-256</div>
-                  </div>
-                  <Badge label={audit.chain_valid?'✓ Chain Valid':'⚠ Chain Broken'} color={audit.chain_valid?'#4ade80':'#f87171'} />
-                </div>
-                <div style={{ display:'flex',flexDirection:'column',gap:7 }}>
-                  {[...audit.ledger].reverse().map(entry=>(
-                    <div key={entry.seq} style={{ border:'1px solid #1e293b',borderRadius:10,padding:'9px 12px',background:entry.event.includes('EXECUTED')?'#052e16':entry.event.includes('TRIGGERED')?'#1c1400':'#0f172a' }}>
-                      <div style={{ display:'flex',justifyContent:'space-between',marginBottom:4,flexWrap:'wrap',gap:4 }}>
-                        <div style={{ display:'flex',alignItems:'center',gap:6 }}>
-                          <span style={{ fontWeight:700,color:'#475569',fontSize:10 }}>#{entry.seq}</span>
-                          <Badge label={entry.event} color={entry.event.includes('EXECUTED')?'#4ade80':entry.event.includes('TRIGGERED')?'#fbbf24':'#34d399'} />
-                          <span style={{ fontSize:10,color:'#475569',fontFamily:'monospace' }}>{entry.policy_id}</span>
-                        </div>
-                        <span style={{ fontSize:9,color:'#475569' }}>{entry.ts.slice(0,19).replace('T',' ')} UTC</span>
-                      </div>
-                      <div style={{ display:'flex',gap:10,flexWrap:'wrap' }}>
-                        <div><span style={{ fontSize:9,color:'#475569' }}>HASH </span><Chip h={entry.hash} /></div>
-                        <div><span style={{ fontSize:9,color:'#475569' }}>PREV </span><Chip h={entry.prev_hash} /></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-            {!audit && (
-              <div style={{ textAlign:'center',padding:40 }}>
-                <button onClick={doAudit} disabled={loading}
-                  style={{ background:loading?'#1e293b':'linear-gradient(135deg,#4c1d95,#6d28d9)',color:loading?'#475569':'#ede9fe',border:'none',borderRadius:10,padding:'11px 26px',fontSize:13,fontWeight:700,display:'inline-flex',alignItems:'center',gap:8 }}>
-                  {loading && <Spin/>}🔗 Fetch Audit Chain
-                </button>
-              </div>
-            )}
-            {audit && (
-              <div style={{ display:'flex',justifyContent:'flex-end' }}>
-                <button onClick={doML} disabled={loading}
-                  style={{ background:'linear-gradient(135deg,#0c4a6e,#0369a1)',color:'#bae6fd',border:'none',borderRadius:10,padding:'11px 22px',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:7 }}>
-                  {loading && <Spin/>}🤖 ML Predictor →
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {step==='ml' && (
-          <div className="fi">
-            <h1 style={{ fontSize:20,fontWeight:800,marginBottom:3,color:'#f1f5f9' }}>{hindi?'🤖 GB v3.0 जोखिम विश्लेषण':'🤖 Step 5 — GB v3.0 Risk Analysis'}</h1>
-            <p style={{ color:'#64748b',fontSize:12,marginBottom:16 }}>Prediction panel + training metrics + feature importance bars.</p>
-            {ml && (
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14 }} className="g2">
-                <Card>
-                  <div style={{ textAlign:'center',padding:'12px 0 8px' }}>
-                    <div style={{ fontSize:52,fontWeight:900,color:RK_COL[ml.risk_level]??'#e2e8f0',lineHeight:1,animation:'celebrate 0.5s ease' }}>{ml.risk_score.toFixed(1)}</div>
-                    <div style={{ fontSize:9,color:'#475569',marginBottom:5 }}>/ 100.0 risk score</div>
-                    <Badge label={ml.risk_level} color={RK_COL[ml.risk_level]} />
-                    <div style={{ marginTop:6,fontSize:11,fontWeight:700,color:ml.triggered?'#4ade80':'#64748b' }}>{ml.triggered?'✅ AUTO-PAYOUT TRIGGERED':'🟡 Below trigger threshold'}</div>
-                  </div>
-                  <div style={{ marginTop:10 }}>
-                    {Object.entries(ml.log_likelihoods).map(([feat,v])=>{
-                      const pct = Math.max(0,Math.min(100,(v.llr+2)*25));
-                      const col = v.llr>2?'#f87171':v.llr>1?'#fb923c':v.llr>0?'#fbbf24':'#4ade80';
-                      return (
-                        <div key={feat} style={{ marginBottom:8 }}>
-                          <div style={{ display:'flex',justifyContent:'space-between',fontSize:10,marginBottom:2 }}>
-                            <span style={{ color:'#94a3b8' }}>{feat} <span style={{ color:'#475569',fontSize:9 }}>({v.weight})</span></span>
-                            <span style={{ fontWeight:700,color:col }}>LLR={v.llr} · {v.label}</span>
-                          </div>
-                          <div style={{ background:'#1e293b',borderRadius:4,height:6 }}>
-                            <div style={{ width:`${pct}%`,background:col,height:6,borderRadius:4,transition:'width 0.8s cubic-bezier(0.4,0,0.2,1)' }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div style={{ fontSize:10,color:'#475569',marginTop:6,fontFamily:'monospace',background:'#030712',padding:'5px 8px',borderRadius:5 }}>Σ LLR = {ml.total_llr} → score {ml.risk_score}</div>
-                  </div>
-                </Card>
-                <Card>
-                  <div style={{ fontSize:11,fontWeight:700,marginBottom:9,color:'#e2e8f0' }}>🚩 Risk Flags</div>
-                  {ml.flags.length===0
-                    ? <div style={{ color:'#4ade80',fontSize:11 }}>✅ No risk flags</div>
-                    : <div style={{ display:'flex',flexDirection:'column',gap:5 }}>{ml.flags.map((f,i)=><div key={i} style={{ background:'#2d0a0a',border:'1px solid #7f1d1d',borderRadius:7,padding:'6px 9px',fontSize:10,color:'#fca5a5' }}>{f}</div>)}</div>
-                  }
-                  <div style={{ marginTop:12,padding:'8px 10px',background:'#030712',borderRadius:7,fontSize:9,color:'#64748b' }}>
-                    <b style={{ color:'#94a3b8' }}>Model:</b> {ml.model}<br/>
-                    <b style={{ marginTop:3,display:'block',color:ml.triggered?'#4ade80':'#64748b' }}>→ {ml.recommendation}</b>
-                  </div>
-                </Card>
-              </div>
-            )}
-            {train && (
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:14 }} className="g2">
-                <TrainPanel train={train} />
-                <FeatureImportance train={train} />
-              </div>
-            )}
-            {!ml && (
-              <div style={{ textAlign:'center',padding:40 }}>
-                <button onClick={doML} disabled={loading}
-                  style={{ background:loading?'#1e293b':'linear-gradient(135deg,#0c4a6e,#0369a1)',color:loading?'#475569':'#bae6fd',border:'none',borderRadius:10,padding:'11px 26px',fontSize:13,fontWeight:700,display:'inline-flex',alignItems:'center',gap:8 }}>
-                  {loading && <Spin/>}🤖 Run ML Predictor
-                </button>
-              </div>
-            )}
-            {(ml || train) && (
-              <div style={{ marginTop:16,display:'flex',justifyContent:'center',gap:10,flexWrap:'wrap' }}>
-                <button onClick={reset} style={{ background:'linear-gradient(135deg,#065f46,#047857)',color:'#d1fae5',border:'none',borderRadius:10,padding:'11px 22px',fontSize:12,fontWeight:700 }}>🔄 New Demo</button>
-                <a href="/impact" style={{ background:'linear-gradient(135deg,#92400e,#b45309)',color:'#fde68a',textDecoration:'none',borderRadius:10,padding:'11px 22px',fontSize:12,fontWeight:700 }}>📊 Impact →</a>
-                <a href="/dashboard" style={{ background:'linear-gradient(135deg,#0c4a6e,#0369a1)',color:'#bae6fd',textDecoration:'none',borderRadius:10,padding:'11px 22px',fontSize:12,fontWeight:700 }}>🗺️ Dashboard →</a>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+                    <option value='REJEC
