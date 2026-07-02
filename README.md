@@ -19,15 +19,15 @@
 
 ---
 
-## 🔍 What's Real vs Simulated — Single Source of Truth
+## 🔍 What’s Real vs Simulated — Single Source of Truth
 
 Every row below is the same answer you will find in JUDGES.md and in the live UI.
 
 | Component | Status | Evidence |
 |-----------|--------|----------|
-| **ML inference (Logistic Regression)** | 🟢 **Live** — runs on every `/api/ml/score` call | `src/app/api/ml/score/route.ts` · `src/data/model_weights.json` |
+| **ML inference (Logistic Regression)** | 🟢 **Live** — runs on every `/api/ml/predict` call | `src/app/api/ml/predict/route.ts` · `src/data/model_weights.json` |
 | **ML model training** | 🟢 **Real** — 500-row dataset, 423 used after cleaning, 338 train / 85 test; AUC=0.83, F1=0.85 | `scripts/train_model.py` · `scripts/training_data.csv` |
-| **SHAP explanations** | 🟢 **Exact** — LinearExplainer (φᵢ = coefᵢ × (xᵢ−μᵢ)/σᵢ), not approximate | `src/app/api/ml/score/route.ts` |
+| **SHAP explanations** | 🟢 **Exact** — LinearExplainer (φᵢ = coefᵢ × (xᵢ−μᵢ)/σᵢ), not approximate | `src/app/api/ml/predict/route.ts` |
 | **Oracle 1 — NASA POWER rainfall** | 🟢 **Live** — real MERRA-2 data, no API key, called at runtime | `src/app/api/oracle/weather/route.ts` |
 | **Oracle 2 — IMD weather stations** | 🟡 **Simulated** — calibrated to IMD published normals | Production target: IMD API subscription |
 | **Oracle 3 — Sentinel-2 NDVI** | 🟡 **Simulated** — calibrated to MODIS district baselines | Production target: ESA Copernicus API |
@@ -83,8 +83,9 @@ Full step-by-step breakdown in every `/api/oracle/verify` response (`payout_math
 ## 🔌 Key API Endpoints
 
 ```bash
-# 1. Live NASA POWER rainfall — Oracle 1
-curl "https://iie-web-yono.vercel.app/api/oracle/weather?district=Barmer"
+# 1. Health
+curl https://iie-web-yono.vercel.app/api/health \
+  -H 'X-Judge-Key: gff2026'
 
 # 2. Oracle quorum + payout math
 curl -X POST https://iie-web-yono.vercel.app/api/oracle/verify \
@@ -92,7 +93,7 @@ curl -X POST https://iie-web-yono.vercel.app/api/oracle/verify \
   -d '{"district":"Barmer","event_type":"drought","acreage":4.5}'
 
 # 3. Real ML inference + SHAP
-curl -X POST https://iie-web-yono.vercel.app/api/ml/score \
+curl -X POST https://iie-web-yono.vercel.app/api/ml/predict \
   -H 'Content-Type: application/json' \
   -d '{"district":"Barmer","ndvi":0.21,"temp_c":47.2,"rainfall_mm":8,"soil_moisture_pct":12,"event_type":"drought"}'
 
